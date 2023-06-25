@@ -1,5 +1,9 @@
 var updateEnv = []
 var envs = {
+    DEVICE_TOKEN_PAYLOAD: process.env.DEVICE_TOKEN_PAYLOAD,
+    CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
+    CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
+    CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
     PROTOCOL: process.env.PROTOCOL,
     HOST: process.env.HOST,
     PORT: parseInt(process.env.PORT),

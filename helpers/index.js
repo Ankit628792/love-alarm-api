@@ -7,9 +7,9 @@ var controller = {}
 
 // Configure Cloudinary
 cloudinary.config({
-    cloud_name: 'your_cloud_name',
-    api_key: 'your_api_key',
-    api_secret: 'your_api_secret'
+    cloud_name: envs.CLOUDINARY_CLOUD_NAME,
+    api_key: envs.CLOUDINARY_API_KEY,
+    api_secret: envs.CLOUDINARY_API_SECRET
 });
 
 
