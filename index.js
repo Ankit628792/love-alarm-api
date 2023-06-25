@@ -7,10 +7,9 @@ var cors = require('cors')
 const { v4: uuidv4 } = require('uuid')
 var moment = require('moment')
 var routes = require('./src/routes')
+const { checkConsole, generateHeartId, generateReferralCode } = require('./helpers/functions')
 // const { planAutomation } = require('./src/helpers/automation')
 require('./config/db')
-
-var commonController = require('./helpers/functions')
 
 var app = express()
 
@@ -21,10 +20,10 @@ app.set('view engine', 'jade')
 app.use(function (req, res, next) {
   req.logId = uuidv4()
   req.startTime = moment()
-  commonController.checkConsole(req, 'INFO', ['Request Received from the Client'])
+  checkConsole(req, 'INFO', ['Request Received from the Client'])
   req.on('end', function () {
     req.responseTime = moment().diff(req.startTime, 'milliseconds')
-    commonController.checkConsole(req, 'INFO', [req.responseTime, 'Response Sent to the Client'])
+    checkConsole(req, 'INFO', [req.responseTime, 'Response Sent to the Client'])
   })
   next()
 })

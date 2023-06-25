@@ -7,18 +7,20 @@ const fs = require('fs')
 
 const updateLocation = async (req, res) => {
     try {
-        if (req.body.location && req.user?._id) {
+        if (req.body.location && req.body?._id) {
             let location = {
+                type: 'Point',
                 coordinates: [req.body.location?.latitude, req.body.location?.longitude]
             }
 
-            let user = await Users.findByIdAndUpdate({ _id: req.user?._id }, { location }, { new: true });
+            let user = await Users.findByIdAndUpdate({ _id: req.body?._id }, { location }, { new: true });
 
             // Find users within a 20-meter radius of the reference location
             let users = await Users.find({
                 location: {
                     $geoWithin: {
-                        $centerSphere: [location.coordinates, 20 / 6378.1] // Divide the radius (20 meters) by the Earth's radius (6378.1 km) for correct conversion
+                        // [[latitude, longitude], radius in meter / Earth's radius]
+                        $centerSphere: [location.coordinates, 2000 / 6378.1] // Divide the radius (20 meters) by the Earth's radius (6378.1 km) for correct conversion
                     }
                 },
                 _id: { $nin: [user.blockedBy, user._id] },
@@ -29,15 +31,21 @@ const updateLocation = async (req, res) => {
                 'setting.isActive': true
             },
                 '_id name image heartId fcmToken location'
-            ).populate({
-                path: 'Rings',
-                match: { $or: [{ sender: user._id }, { receiver: user._id }] }
-            })
+            ).lean()
+            // .populate({
+            //     path: 'Rings',
+            //     match: { $or: [{ sender: user._id }, { receiver: user._id }] }
+            // })
+
+            let data = await Promise.all(users.map(async (item) => {
+                let receiverArr = await Rings.findOne({ sender: item?._id, receiver: user?._id, receiverVisibility: true }, '_id').lean();
+                return { ...item, isSender: receiverArr?._id ? true : false }
+            }))
 
             res.status(200).send({
                 success: true,
                 message: 'Retrieved Successfully!',
-                data: users
+                data
             })
         }
         else {
@@ -239,12 +247,13 @@ const ringLoveAlarm = async (req, res) => {
     try {
         if (req.body.receiver && req.body.location) {
             let location = {
+                type: 'Point',
                 coordinates: [req.body.location.latitude, req.body.location.longitude]
             }
             let ring = await Rings.create({
-                sender: req.user?._id,
+                sender: req.body.sender,
                 receiver: req.body.receiver,
-                location
+                location    // sender's location
             })
             res.status(200).send({
                 success: true,

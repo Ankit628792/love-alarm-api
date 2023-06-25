@@ -1,5 +1,4 @@
 var mongoose = require('mongoose');
-var DB = require('../../config/db');
 const { AES } = require('crypto-js')
 
 function hasNumber(v) {
@@ -16,9 +15,9 @@ var schema = new mongoose.Schema({
     email: { type: String, trim: true, lowercase: true, unique: true },
     mobile: { type: String, trim: true, unique: true, validate: hasNumber },
     name: { type: String, trim: true },
-    gender: { type: String, trim: true, enum: ['male', 'female', 'other'] },
+    gender: { type: String, trim: true, lowercase: true, enum: ['male', 'female', 'other'] },
     image: { type: String, trim: true },
-    interestedIn: { type: String, trim: true, enum: ['male', 'female', 'other'] },
+    interestedIn: { type: String, trim: true, lowercase: true, enum: ['male', 'female', 'other'] },
     age: { type: Number, min: 16 },
     onboardStep: { type: Number, default: 1, min: 1 },
     heartId: { type: String, required: true },

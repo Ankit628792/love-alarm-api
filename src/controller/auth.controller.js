@@ -58,7 +58,7 @@ const verifyOtp = async (req, res) => {
                     let user = await Users.create({
                         plan: plan._id,
                         mobile,
-                        heartId: generateHeartId(),
+                        heartId: generateHeartId(7),
                         fcmToken,
                         referralCode: generateReferralCode()
                     })
