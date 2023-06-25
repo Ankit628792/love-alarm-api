@@ -10,12 +10,16 @@ async function authMiddleware(req, res, next) {
             if (token) {
                 let payload = validateToken(token);
                 if (payload) {
-                    req.user = await Users.findOne(payload).populate('Plans', 'name planType');
+                    let deviceToken = req.headers[process.env.DEVICE_TOKEN_PAYLOAD];
+                    let user = await Users.findOne(payload).populate('Plans', 'name planType').lean();
+                    req.user = user;
                     if (req.user) {
-                        req.user = req.user.toJSON()
                         if (req.user.status == 'block') {
                             res.status(403).json({ success: false, message: 'Your Account is blocked. Please contact admin.' })
-                        } else {
+                        } else if (deviceToken && user.fcmToken != deviceToken) {
+                            res.status(403).json({ success: false, message: 'Session Expired!' })
+                        }
+                        else {
                             next()
                         }
                     } else {
@@ -43,7 +47,7 @@ async function validateSignIn(req, res, next) {
         if (!req.body.primaryPhone) {
             return res.status(400).json({ message: 'Invalid mobile' })
         }
-        req.user = await Users.findOne({ primaryPhone: req.body.primaryPhone })
+        req.user = await Users.findOne({ primaryPhone: req.body.primaryPhone }).lean()
         if (req.user) {
             if (req.user.status == 'active') {
                 next()
