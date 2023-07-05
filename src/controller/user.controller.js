@@ -1,9 +1,11 @@
 const envs = require("../../config/env");
-const { cloudinary } = require("../../helpers");
+const { cloudinary, stripe } = require("../../helpers");
+const { generateHeartId, generateReferralCode } = require("../../helpers/functions");
 const { verifyImage, sendVerifyResponse } = require("../../helpers/sightengine");
 const Rings = require("../models/ring.model");
 const Users = require("../models/user.model")
 const fs = require('fs')
+const moment = require('moment')
 
 const updateLocation = async (req, res) => {
     try {
@@ -63,13 +65,18 @@ const updateLocation = async (req, res) => {
     }
 }
 
-const updateProfile = async () => {
+const updateProfile = async (req, res) => {
     try {
         if (req.user?._id) {
+            let body = req.body;
+            if (body.dateOfBirth) {
+                let age = moment().diff(moment(body.dateOfBirth), 'years');
+                body.age = age
+            }
             const user = await Users.findByIdAndUpdate({ _id: req?.user?._id }, req.body, { new: true });
             res.status(200).send({
                 success: true,
-                message: 'Updated Successfully!'
+                message: 'Profile Updated Successfully!'
             })
         }
         else {
@@ -115,11 +122,14 @@ const getProfile = async () => {
 const updateImage = async (req, res) => {
 
     let user = req.user;
+    console.log(req.file)
     try {
         if (!user) throw Error("User Not found")
         if (req.file) {
-
-            let url = `${envs.PROTOCOL}://${envs.HOST}/${req.file?.path}`
+            let path = req.file?.path?.split("public")[1].split("\\").join("/")
+            let url = `https://4267-103-165-28-188.ngrok-free.app/${path}`
+            console.log(url)
+            // let url = `${envs.PROTOCOL}://${envs.HOST}/${req.file?.path}`
             let imageVerify;
             try {
                 imageVerify = await verifyImage({ image: url });
@@ -130,6 +140,7 @@ const updateImage = async (req, res) => {
                     verified: false
                 };
             }
+            console.log(imageVerify)
             // Add AES.encrypt before sending image response
             if (imageVerify.verified && imageVerify.faceDetected == 1 && imageVerify.nuditySafeProbability > 0.7) {
 
@@ -292,7 +303,7 @@ const pauseRinging = async (req, res) => {
     }
 }
 
-const updateSetting = async () => {
+const updateSetting = async (req, res) => {
     try {
         let { setting } = req.body;
         if (setting) {
@@ -317,4 +328,50 @@ const updateSetting = async () => {
     }
 }
 
-module.exports = { updateLocation, updateProfile, getProfile, updateImage, getAlarmRings, ringLoveAlarm, pauseRinging, updateSetting }
+
+const paymentIntent = async (req, res) => {
+    let user = {
+        id: 123456789,
+        name: 'User test'
+    }
+
+    let plan = req.body.plan
+
+    let data = {
+        amount: plan.amount * 100,
+        currency: 'usd',
+        shipping: {
+            name: 'My Name',
+            address: {
+                line1: '510 Townsend St',
+                postal_code: '98140',
+                city: 'San Francisco',
+                state: 'CA',
+                country: 'US',
+            },
+        },
+        description: 'testing the app',
+        payment_method_types: [
+            'card',
+            // 'google_pay',
+            // 'us_bank_account',
+            // 'affirm',
+            // 'afterpay_clearpay',
+            // 'klarna'
+        ],
+        metadata: {
+            customer_name: user.name, // Customer's name
+        },
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create(data)
+
+    res.status(200).send({
+        paymentIntent: paymentIntent.client_secret,
+        // ephemeralKey: ephemeralKey.secret,
+        customer: user.id
+    })
+}
+
+
+module.exports = { updateLocation, updateProfile, getProfile, updateImage, getAlarmRings, ringLoveAlarm, pauseRinging, updateSetting, paymentIntent }

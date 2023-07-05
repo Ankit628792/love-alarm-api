@@ -19,6 +19,7 @@ var schema = new mongoose.Schema({
     image: { type: String, trim: true },
     interestedIn: { type: String, trim: true, lowercase: true, enum: ['male', 'female', 'other'] },
     age: { type: Number, min: 16 },
+    dateOfBirth: { type: mongoose.Schema.Types.Date },
     onboardStep: { type: Number, default: 1, min: 1 },
     heartId: { type: String, required: true },
     fcmToken: { type: String },

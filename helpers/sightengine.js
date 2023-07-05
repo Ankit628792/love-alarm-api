@@ -28,9 +28,9 @@ const sendVerifyResponse = (imageVerify) => {
     extraInfo.faceDetected = imageVerify.faces.length;
     imageVerify.faces.map(({ celebrity }) => {
       // console.log(celebrity);
-      const matchedCelebrity = celebrity.filter(({ prob }) => prob > 0.9);
+      const matchedCelebrity = celebrity?.filter(({ prob }) => prob > 0.9);
       console.log(matchedCelebrity);
-      if (matchedCelebrity.length) {
+      if (matchedCelebrity?.length) {
         verified = false;
         extraInfo.reason = 'Please use a non-celebrity picture';
         extraInfo.matchedCelebrityName = matchedCelebrity[0].name;

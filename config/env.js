@@ -31,6 +31,8 @@ var envs = {
     AWS_S3_WITHOUT_REGION_DOMAIN: process.env.AWS_S3_WITHOUT_REGION_DOMAIN,
     AWS_S3_REGION: process.env.AWS_S3_REGION,
 
+    STRIPE_SECRET: process.env.STRIPE_SECRET,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
 }
 
 trimmer(envs)

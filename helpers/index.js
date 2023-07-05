@@ -3,6 +3,8 @@ var bcrypt = require('bcryptjs');
 var envs = require('../config/env')
 const cloudinary = require('cloudinary').v2;
 
+const stripe = require('stripe')(envs.STRIPE_SECRET)
+
 var controller = {}
 
 // Configure Cloudinary
@@ -69,5 +71,6 @@ controller.compareEncryptedString = compareEncryptedString
 controller.encrypt = encrypt
 controller.decrypt = decrypt
 controller.cloudinary = cloudinary
+controller.stripe = stripe
 
 module.exports = controller

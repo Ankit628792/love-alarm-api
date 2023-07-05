@@ -1,6 +1,6 @@
 var express = require("express");
 const { authMiddleware } = require("../middleware/auth.middleware");
-const { updateLocation, updateProfile, updateImage, getAlarmRings, ringLoveAlarm, pauseRinging, updateSetting, getProfile } = require("../controller/user.controller");
+const { updateLocation, updateProfile, updateImage, getAlarmRings, ringLoveAlarm, pauseRinging, updateSetting, getProfile, paymentIntent } = require("../controller/user.controller");
 const { upload } = require("../middleware/user.middleware");
 const Rings = require("../models/ring.model");
 const Plans = require("../models/plan.model");
@@ -22,7 +22,7 @@ router.patch('/ring', authMiddleware, pauseRinging);
 
 router.patch('/setting', authMiddleware, updateSetting)
 
-
+router.post('/create-payment-intent', paymentIntent)
 
 
 router.get('/seeder/rings', async (req, res) => {

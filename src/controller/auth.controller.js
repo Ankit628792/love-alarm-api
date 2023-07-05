@@ -11,15 +11,16 @@ const sendOtp = async (req, res) => {
         if (req.body.mobile) {
             let otp = generateOTP();
             var message = `Your OTP to verify number on Love Alarm is <#> ${otp} ${req.body.hash} valid for next 5 minutes. Do not share this OTP with anyone`
-            await sendOTPSms({ message: message, numbers: [req.body.mobile] })
+            // await sendOTPSms({ message: message, numbers: [req.body.mobile] })
+            console.log(otp)
             let doc = await OTPs.create({
                 mobile: req.body.mobile,
-                otp: encrypt(otp, otp),
+                otp: encrypt(otp?.toString(), otp?.toString()),
                 realOTP: otp  // will be removed in production
             })
             setTimeout(() => OTPs.findByIdAndUpdate({ _id: doc._id }, { isExpired: true }), 1000 * 60 * 5);
             res.status(200).send({
-                success: false,
+                success: true,
                 message: 'OTP sent successfully!'
             })
         }
@@ -44,7 +45,6 @@ const verifyOtp = async (req, res) => {
         if (mobile && otp) {
 
             let isOtp = await OTPs.findOne({ mobile, otp }).sort({ createdAt: -1 });
-
             if (isOtp || (envs.MAGIC_OTP == decrypt(otp, otp))) { // remove magic otp in production
 
                 if (isOtp.isExpired) {
@@ -55,19 +55,28 @@ const verifyOtp = async (req, res) => {
                 }
                 else {
                     let plan = await Plans.findOne({ planType: 'free' })
-                    let user = await Users.create({
-                        plan: plan._id,
-                        mobile,
-                        heartId: generateHeartId(7),
-                        fcmToken,
-                        referralCode: generateReferralCode()
-                    })
+                    let isUser = await Users.findOne({ mobile }).lean()
+                    let user;
+                    if (isUser) {
+                        user = isUser
+                    }
+                    else {
+                        user = await Users.create({
+                            plan: plan._id,
+                            mobile,
+                            heartId: generateHeartId(7),
+                            fcmToken,
+                            referralCode: generateReferralCode()
+                        })
+                    }
+
                     await OTPs.deleteMany({ mobile: mobile });
                     let token = await createAccessToken({ _id: user._id, heartId: user?.heartId });
                     res.status(200).send({
-                        success: false,
+                        success: true,
                         message: 'OTP Verified!',
-                        token
+                        token,
+                        onboardStep: user.status
                     })
                 }
             }
