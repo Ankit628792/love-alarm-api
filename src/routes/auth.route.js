@@ -1,7 +1,7 @@
 var express = require("express");
+var router = express.Router();
 const { sendOtp, verifyOtp, validateUser } = require("../controller/auth.controller");
 const { authMiddleware } = require("../middleware/auth.middleware");
-var router = express.Router();
 
 router.get('/test', (req, res) => {
     res.send('hello')

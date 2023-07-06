@@ -14,7 +14,7 @@ async function authMiddleware(req, res, next) {
                     let user = await Users.findOne({ _id: payload._id }).populate('plan', 'name planType').lean();
                     req.user = user;
                     if (req.user) {
-                        if (req.user.status == 'block') {
+                        if (req.user.status == 'blocked') {
                             res.status(403).json({ success: false, message: 'Your Account is blocked. Please contact admin.' })
                         } else if (deviceToken && user.fcmToken != deviceToken) {
                             res.status(403).json({ success: false, message: 'Session Expired!' })

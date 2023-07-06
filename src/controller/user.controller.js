@@ -1,7 +1,8 @@
 const envs = require("../../config/env");
 const { cloudinary, stripe } = require("../../helpers");
-const { generateHeartId, generateReferralCode } = require("../../helpers/functions");
 const { verifyImage, sendVerifyResponse } = require("../../helpers/sightengine");
+const Feedbacks = require("../models/feedback.model");
+const Matches = require("../models/match.model");
 const Rings = require("../models/ring.model");
 const Users = require("../models/user.model")
 const fs = require('fs')
@@ -97,7 +98,7 @@ const updateProfile = async (req, res) => {
 const getProfile = async () => {
     try {
         if (req.user?._id) {
-            const user = await Users.findById({ _id: req?.user?._id }).select('_id name email mobile gender image interestedIn age heartId referralCode').populate('Plans', 'name planType');
+            const user = await Users.findById({ _id: req?.user?._id }).select('_id name email mobile gender image interestedIn age heartId referralCode').populate('plan', 'name planType').lean();
             res.status(200).send({
                 success: true,
                 message: 'Retrieved Successfully!',
@@ -122,12 +123,12 @@ const getProfile = async () => {
 const updateImage = async (req, res) => {
 
     let user = req.user;
-    console.log(req.file)
+
     try {
         if (!user) throw Error("User Not found")
         if (req.file) {
             let path = req.file?.path?.split("public")[1].split("\\").join("/")
-            let url = `https://4267-103-165-28-188.ngrok-free.app/${path}`
+            let url = `https://5133-103-165-28-188.ngrok-free.app${path}`
             console.log(url)
             // let url = `${envs.PROTOCOL}://${envs.HOST}/${req.file?.path}`
             let imageVerify;
@@ -140,7 +141,8 @@ const updateImage = async (req, res) => {
                     verified: false
                 };
             }
-            console.log(imageVerify)
+
+            console.log(imageVerify, 2)
             // Add AES.encrypt before sending image response
             if (imageVerify.verified && imageVerify.faceDetected == 1 && imageVerify.nuditySafeProbability > 0.7) {
 
@@ -165,142 +167,6 @@ const updateImage = async (req, res) => {
         res.status(400).send({ success: false, message: error?.message })
     }
 
-}
-
-const getAlarmRings = async (req, res) => {
-    try {
-        // Count rings for each receiver
-        let senderRings = await Rings.aggregate([
-            {
-                $match: { sender: req.user?._id, senderVisibility: true }
-            },
-            {
-                $group: {
-                    _id: '$receiver',
-                    ringCount: { $sum: 1 }
-                }
-            },
-            {
-                $lookup: {
-                    from: 'Users',
-                    localField: '_id',
-                    foreignField: '_id',
-                    as: 'receiver' // Populate the receiver's information
-                }
-            },
-            {
-                $project: {
-                    _id: 0,
-                    receiver: { $arrayElemAt: ['$receiver', 0] }, // Extract the receiver information from the array
-                    ringCount: 1 // Include the ring count in the result
-                }
-            },
-            {
-                $project: {
-                    'receiver.name': 1, // Include the receiver's name
-                    'receiver.image': 1, // Include the receiver's image
-                    'receiver.heartId': 1,
-                    ringCount: 1 // Include the ring count
-                }
-            }
-        ]);
-        let receiverRings = await Rings.aggregate([
-            {
-                $match: { receiver: req.user?._id, receiverVisibility: true }
-            },
-            {
-                $group: {
-                    _id: '$sender',
-                    ringCount: { $sum: 1 }
-                }
-            },
-            {
-                $lookup: {
-                    from: 'Users',
-                    localField: '_id',
-                    foreignField: '_id',
-                    as: 'sender' // Populate the sender's information
-                }
-            },
-            {
-                $project: {
-                    _id: 0,
-                    sender: { $arrayElemAt: ['$sender', 0] }, // Extract the sender information from the array
-                    ringCount: 1 // Include the ring count in the result
-                }
-            },
-            {
-                $project: {
-                    'sender.name': 1, // Include the sender's name
-                    'sender.image': 1, // Include the sender's image
-                    'sender.heartId': 1,
-                    ringCount: 1 // Include the ring count
-                }
-            }
-        ]);
-
-        res.status(200).send({
-            success: true,
-            message: 'Retrieved Successfully!',
-            data: {
-                senderRings,
-                receiverRings
-            }
-        })
-
-    } catch (error) {
-        console.log(error)
-        res.status(400).send({ success: false, message: error?.message })
-    }
-}
-
-const ringLoveAlarm = async (req, res) => {
-    try {
-        if (req.body.receiver && req.body.location) {
-            let location = {
-                type: 'Point',
-                coordinates: [req.body.location.latitude, req.body.location.longitude]
-            }
-            let ring = await Rings.create({
-                sender: req.body.sender,
-                receiver: req.body.receiver,
-                location    // sender's location
-            })
-            res.status(200).send({
-                success: true,
-                message: 'Ringed Love Alarm',
-            })
-        }
-        else
-            res.status(400).send({ success: false, message: 'Missing Params' })
-    } catch (error) {
-        console.log(error)
-        res.status(400).send({ success: false, message: error?.message })
-    }
-}
-
-const pauseRinging = async (req, res) => {
-    try {
-        if (req.body.receiver) {
-            await Rings.updateMany({
-                sender: req.user?._id,
-                receiver: req.body.receiver,
-                senderVisibility: false
-            })
-        }
-        else if (req.body.sender) {
-            await Rings.updateMany({
-                sender: req.body.sender,
-                receiver: req.user?._id,
-                senderVisibility: false
-            })
-        }
-        else
-            res.status(400).send({ success: false, message: 'Missing Params' })
-    } catch (error) {
-        console.log(error)
-        res.status(400).send({ success: false, message: error?.message })
-    }
 }
 
 const updateSetting = async (req, res) => {
@@ -374,4 +240,28 @@ const paymentIntent = async (req, res) => {
 }
 
 
-module.exports = { updateLocation, updateProfile, getProfile, updateImage, getAlarmRings, ringLoveAlarm, pauseRinging, updateSetting, paymentIntent }
+const userFeedback = async (req, res) => {
+    try {
+        let { comment, category } = req.body;
+        if (comment && req.user?._id) {
+
+            let feedback = await Feedbacks.create({ sender: req?.user?._id, comment, category })
+
+            res.status(200).send({
+                success: true,
+                message: `${req.body.category} send successfully!`,
+                data: feedback
+            })
+        }
+        else {
+            res.status(400).send({ success: false, message: 'Missing Params' })
+        }
+    } catch (error) {
+        console.log(error)
+        res.status(400).send({ success: false, message: error?.message })
+    }
+}
+
+
+
+module.exports = { updateLocation, updateProfile, getProfile, updateImage, updateSetting, paymentIntent, userFeedback }

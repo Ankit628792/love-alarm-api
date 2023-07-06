@@ -1,11 +1,11 @@
 var express = require("express");
+var router = express.Router();
 const { authMiddleware } = require("../middleware/auth.middleware");
-const { updateLocation, updateProfile, updateImage, getAlarmRings, ringLoveAlarm, pauseRinging, updateSetting, getProfile, paymentIntent } = require("../controller/user.controller");
+const { updateLocation, updateProfile, updateImage, updateSetting, getProfile, paymentIntent, userFeedback, userMatches } = require("../controller/user.controller");
 const { upload } = require("../middleware/user.middleware");
 const Rings = require("../models/ring.model");
 const Plans = require("../models/plan.model");
 const Users = require("../models/user.model");
-var router = express.Router();
 
 router.get('/test', (req, res) => {
     res.send('hello')
@@ -16,13 +16,11 @@ router.patch('/profile', authMiddleware, updateProfile);
 router.get('/profile', authMiddleware, getProfile);
 router.patch('/image', authMiddleware, upload.single('image'), updateImage);
 
-router.get('/ring', authMiddleware, getAlarmRings);
-router.post('/ring', authMiddleware, ringLoveAlarm);
-router.patch('/ring', authMiddleware, pauseRinging);
-
 router.patch('/setting', authMiddleware, updateSetting)
 
 router.post('/create-payment-intent', paymentIntent)
+
+router.post('/feedback', authMiddleware, userFeedback)
 
 
 router.get('/seeder/rings', async (req, res) => {
