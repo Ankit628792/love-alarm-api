@@ -17,7 +17,7 @@ const getAlarmRings = async (req, res) => {
             },
             {
                 $lookup: {
-                    from: 'Users',
+                    from: 'users',
                     localField: '_id',
                     foreignField: '_id',
                     as: 'receiver' // Populate the receiver's information
@@ -32,6 +32,7 @@ const getAlarmRings = async (req, res) => {
             },
             {
                 $project: {
+                    'receiver._id': 1,
                     'receiver.name': 1, // Include the receiver's name
                     'receiver.image': 1, // Include the receiver's image
                     'receiver.heartId': 1,
@@ -51,7 +52,7 @@ const getAlarmRings = async (req, res) => {
             },
             {
                 $lookup: {
-                    from: 'Users',
+                    from: 'users',
                     localField: '_id',
                     foreignField: '_id',
                     as: 'sender' // Populate the sender's information
@@ -66,6 +67,7 @@ const getAlarmRings = async (req, res) => {
             },
             {
                 $project: {
+                    'sender._id': 1,
                     'sender.name': 1, // Include the sender's name
                     'sender.image': 1, // Include the sender's image
                     'sender.heartId': 1,
@@ -138,6 +140,7 @@ const pauseRinging = async (req, res) => {
             await Rings.updateMany({
                 sender: req.user?._id,
                 receiver: req.body.receiver,
+            }, {
                 senderVisibility: false
             })
             res.status(200).send({ success: true, message: 'Successfully Removed' })
@@ -146,6 +149,7 @@ const pauseRinging = async (req, res) => {
             await Rings.updateMany({
                 sender: req.body.sender,
                 receiver: req.user?._id,
+            }, {
                 receiverVisibility: false
             })
             res.status(200).send({ success: true, message: 'Successfully Removed' })

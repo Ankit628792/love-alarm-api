@@ -1,11 +1,7 @@
-// var AWS = require('aws-sdk')
-// const sgMail = require('@sendgrid/mail')
-var fs = require('fs')
 var envs = require('../config/env')
 var axios = require('axios').default
 var commons = {}
 
-// sgMail.setApiKey(envs.SENDGRID_API_KEY)
 
 function checkConsole(req, type, arrayParams) {
     let data = [
@@ -24,52 +20,6 @@ function checkConsole(req, type, arrayParams) {
     }
 }
 
-function sendMail(data) {
-    // return sgMail.send(data)
-}
-
-function fileUpload(file, directory) {
-    // return new Promise((resolve, reject) => {
-    //     fs.readFile(file.path, function (err, data) {
-    //         if (err) {
-    //             reject(err);
-    //         } else {
-    //             const S3 = new AWS.S3({
-    //                 accessKeyId: envs.AWS_IAM_USER_KEY,
-    //                 secretAccessKey: envs.AWS_IAM_USER_SECRET,
-    //                 Bucket: envs.AWS_PRODUCT_BUCKET,
-    //             });
-    //             S3.createBucket(function () {
-    //                 const params = {
-    //                     ACL: 'public-read',
-    //                     Bucket: envs.AWS_PRODUCT_BUCKET + `/${directory}`,
-    //                     Key: file.filename,
-    //                     ContentType: file.mimetype,
-    //                     // ContentEncoding: file.encoding,
-    //                     Body: data,
-    //                 };
-    //                 S3.upload(params, function (err, url) {
-    //                     fs.unlink(file.path, function (err) {
-    //                         if (err) {
-    //                             reject(err);
-    //                         }
-    //                     });
-    //                     if (err) {
-    //                         reject(err);
-    //                     } else {
-    //                         if (url.Location.indexOf(envs.AWS_S3_REGION) == -1) {
-    //                             url.Location = url.Location.replace(envs.AWS_S3_WITHOUT_REGION_DOMAIN, envs.AWS_CDN_DOMAIN)
-    //                         } else {
-    //                             url.Location = url.Location.replace(envs.AWS_S3_WITH_REGION_DOMAIN, envs.AWS_CDN_DOMAIN)
-    //                         }
-    //                         resolve(url.Location);
-    //                     }
-    //                 });
-    //             });
-    //         }
-    //     });
-    // });
-}
 
 function sendOTPSms(data) {
     let body = {
@@ -165,14 +115,12 @@ function generateHeartId(length) {
     return randomString;
   }
 
-commons.fileUpload = fileUpload
 commons.sendOTPSms = sendOTPSms
 commons.generateOTP = generateOTP
 commons.sendTransSms = sendTransSms
 commons.randomIntFromInterval = randomIntFromInterval
 commons.getRandomFromArray = getRandomFromArray
 commons.genRandDecimal = genRandDecimal
-commons.sendMail = sendMail
 commons.checkConsole = checkConsole
 commons.distanceLatLng = distanceLatLng
 commons.generateReferralCode = generateReferralCode

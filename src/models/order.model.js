@@ -1,16 +1,22 @@
 var mongoose = require('mongoose');
 
 var schema = new mongoose.Schema({
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'users', required: true },
-    status: { type: String, default: 'pending', enum: ['pending', 'complete', 'failed'], required: true },
-    paymentFor: { type: String, enum: ['subscription'], required: true },
-    planId: { type: mongoose.Schema.Types.ObjectId, ref: 'plans', required: true },
-    paymentAmount: { type: Number },
-    paymentCurrency: { type: String },
-    paymentMode: { type: String },
-    referenceId: { type: String },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'Users', required: true },
+    status: { type: String, default: 'pending', enum: ['pending', 'completed', 'failed'], required: true },
+    paymentFor: { type: String, enum: ['subscription', 'referral'], required: true },
+    plan: { type: mongoose.Schema.Types.ObjectId, ref: 'Plans', required: true },
+    paymentAmount: { type: Number, required: true },
+    paymentCurrency: { type: String, required: true },
+
+    paymentMethod: { type: String },
+    payment_method_details: { type: Object },
+    paymentIntentId: { type: String },
+    paymentSuccessId: { type: String },
+    receipt: { type: String },
+
     validUpto: { type: Date },
-    platform: { type: String }
+
+    metadata: { type: Object }
 }, { timestamps: true });
 
 const Orders = mongoose.model('Orders', schema);

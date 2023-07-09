@@ -10,6 +10,9 @@ var routes = require('./src/routes')
 const { checkConsole } = require('./helpers/functions')
 const { stripe } = require('./helpers')
 const { STRIPE_WEBHOOK_SECRET } = require('./config/env')
+const Notices = require('./src/models/notice.model')
+const Orders = require('./src/models/order.model')
+const Users = require('./src/models/user.model')
 require('./config/db')
 
 var app = express()
@@ -53,6 +56,15 @@ app.get('/', (req, res) => {
   res.status(200).send({ msg: `Backend moves to active state on ${new Date().toString()}` })
 })
 
+app.get('/add', async (req, res) => {
+  let data = await Notices.create({
+    icon: 'https://cdn-icons-png.flaticon.com/512/10281/10281551.png',
+    title: 'iOS App 2',
+    description: `Our Developer are working on iOS app. It'll be available on app store soon`
+  })
+  res.status(200).send(data)
+})
+
 
 app.use("/api/v2/", routes);
 
@@ -77,6 +89,7 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
     case 'payment_intent.canceled':
       const paymentIntentCanceled = event.data.object;
       // Then define and call a function to handle the event payment_intent.canceled
+      await Orders.findOneAndDelete({ paymentIntentId: paymentIntentCanceled.id })
       break;
     case 'payment_intent.created':
       const paymentIntentCreated = event.data.object;
@@ -85,11 +98,39 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
     case 'payment_intent.payment_failed':
       const paymentIntentPaymentFailed = event.data.object;
       // Then define and call a function to handle the event payment_intent.payment_failed
+      await Orders.findOneAndDelete({ paymentIntentId: paymentIntentPaymentFailed.id })
+
       break;
     case 'payment_intent.succeeded':
       const paymentIntentSucceeded = event.data.object;
       // Then define and call a function to handle the event payment_intent.succeeded
 
+      let order = await Orders.findOne({ paymentIntentId: paymentIntentSucceeded.id }).populate('plan', '_id amount noOfDays').lean();
+
+      let validity = new Date();
+      validity.setDate(validity.getDate() + order.plan.noOfDays);
+
+      let obj = {
+        status: 'completed',
+        paymentAmount: paymentIntentSucceeded.amount_received / 100,
+        paymentCurrency: paymentIntentSucceeded.currency,
+
+        paymentMethod: paymentIntentSucceeded.payment_method,
+        payment_method_details: paymentIntentSucceeded.charges.data[0].payment_method_details,
+        paymentIntentId: paymentIntentSucceeded.id,
+        paymentSuccessId: event.id,
+        receipt: paymentIntentSucceeded.charges.data[0].receipt_url,
+
+        validUpto: validity,
+
+        metadata: {
+          customer_name: paymentIntentSucceeded.metadata.customer_name,
+          customer_mobile: paymentIntentSucceeded.metadata.customer_mobile
+        }
+      }
+
+      let updatedOrder = await Orders.findOneAndUpdate({ paymentIntentId: paymentIntentSucceeded.id }, obj, { new: true }).lean();
+      await Users.findByIdAndUpdate({ _id: updatedOrder.user }, { plan: updatedOrder.plan })
       break;
     // ... handle other event types
     default:

@@ -2,7 +2,8 @@ const envs = require("../../config/env");
 const { cloudinary, stripe } = require("../../helpers");
 const { verifyImage, sendVerifyResponse } = require("../../helpers/sightengine");
 const Feedbacks = require("../models/feedback.model");
-const Matches = require("../models/match.model");
+const Orders = require("../models/order.model");
+const Plans = require("../models/plan.model");
 const Rings = require("../models/ring.model");
 const Users = require("../models/user.model")
 const fs = require('fs')
@@ -10,6 +11,7 @@ const moment = require('moment')
 
 const updateLocation = async (req, res) => {
     try {
+        // console.log(req.body)
         if (req.body.location && req.body?._id) {
             let location = {
                 type: 'Point',
@@ -28,21 +30,22 @@ const updateLocation = async (req, res) => {
                 },
                 _id: { $nin: [user.blockedBy, user._id] },
                 gender: user?.interestedIn,
-                onboardStep: { $gte: 5 },
+                onboardStep: { $gte: 1 },
                 status: 'active',
                 age: { $gte: user.age - 5, $lte: user.age + 5 },
                 'setting.isActive': true
             },
                 '_id name image heartId fcmToken location'
             ).lean()
-            // .populate({
-            //     path: 'Rings',
-            //     match: { $or: [{ sender: user._id }, { receiver: user._id }] }
-            // })
 
             let data = await Promise.all(users.map(async (item) => {
-                let receiverArr = await Rings.findOne({ sender: item?._id, receiver: user?._id, receiverVisibility: true }, '_id').lean();
-                return { ...item, isSender: receiverArr?._id ? true : false }
+                let receiverArr = await Rings.findOne({ sender: item?._id, receiver: user?._id, receiverVisibility: true }, '_id').lean(); // logged in user is receiver
+                let senderArr = await Rings.findOne({ receiver: item?._id, sender: user?._id, senderVisibility: true }, '_id').lean(); // logged in user is sender
+                return {
+                    ...item,
+                    isSender: receiverArr?._id ? true : false, // this user is sender and logged in is receiver 
+                    isReceiver: senderArr?._id ? true : false, // this user is receiver and logged in is sender
+                }
             }))
 
             res.status(200).send({
@@ -128,7 +131,8 @@ const updateImage = async (req, res) => {
         if (!user) throw Error("User Not found")
         if (req.file) {
             let path = req.file?.path?.split("public")[1].split("\\").join("/")
-            let url = `https://5133-103-165-28-188.ngrok-free.app${path}`
+            console.log(path)
+            let url = `${envs.PRODUCTION_URL}${path}`
             console.log(url)
             // let url = `${envs.PROTOCOL}://${envs.HOST}/${req.file?.path}`
             let imageVerify;
@@ -196,47 +200,63 @@ const updateSetting = async (req, res) => {
 
 
 const paymentIntent = async (req, res) => {
-    let user = {
-        id: 123456789,
-        name: 'User test'
-    }
 
-    let plan = req.body.plan
+    try {
+        let { _id } = req.body.plan;
+        let user = req.user;
+        let plan = await Plans.findOne({ _id }).lean();
 
-    let data = {
-        amount: plan.amount * 100,
-        currency: 'usd',
-        shipping: {
-            name: 'My Name',
-            address: {
-                line1: '510 Townsend St',
-                postal_code: '98140',
-                city: 'San Francisco',
-                state: 'CA',
-                country: 'US',
+
+        let data = {
+            amount: plan.amount * 100,
+            currency: 'usd',
+            shipping: {
+                name: 'Ankit',
+                address: {
+                    line1: 'Nowhere',
+                    postal_code: '110078',
+                    city: 'Austin',
+                    state: 'Austin',
+                    country: 'US',
+                },
             },
-        },
-        description: 'testing the app',
-        payment_method_types: [
-            'card',
-            // 'google_pay',
-            // 'us_bank_account',
-            // 'affirm',
-            // 'afterpay_clearpay',
-            // 'klarna'
-        ],
-        metadata: {
-            customer_name: user.name, // Customer's name
-        },
+            description: `Love Alarm - ${plan.name}`,
+            payment_method_types: [
+                'card',
+                // 'google_pay',
+                // 'us_bank_account',
+                // 'affirm',
+                // 'afterpay_clearpay',
+                // 'klarna'
+            ],
+            metadata: {
+                customer_name: user.name, // Customer's name
+                customer_mobile: user.mobile, // Customer's mobile
+            },
+        }
+        const paymentIntent = await stripe.paymentIntents.create(data);
+
+        let order = await Orders.create({
+            user: user?._id,
+            status: 'pending',
+            paymentFor: 'subscription',
+            plan: plan._id,
+            paymentAmount: plan.amount,
+            paymentCurrency: plan.currency,
+            paymentIntentId: paymentIntent.id
+        });
+
+
+
+        res.status(200).send({
+            paymentIntent: paymentIntent.client_secret,
+            customer: user.id
+        })
+    } catch (error) {
+        console.log(error)
+        res.status(400).send({ success: false, message: error?.message })
+
     }
-
-    const paymentIntent = await stripe.paymentIntents.create(data)
-
-    res.status(200).send({
-        paymentIntent: paymentIntent.client_secret,
-        // ephemeralKey: ephemeralKey.secret,
-        customer: user.id
-    })
 }
 
 
@@ -262,6 +282,30 @@ const userFeedback = async (req, res) => {
     }
 }
 
+const getPlan = async (req, res) => {
+    try {
+        let data;
+        if (req.user.plan.planType == 'free') {
+            let plan = await Plans.findById({ _id: req.user.plan._id }).lean()
+            data = {
+                user: req.user?._id,
+                plan: plan
+            }
+        }
+        else {
+            data = await Orders.findOne({ status: 'completed', user: req.user?._id }, '_id user status paymentFor plan paymentSuccessId receipt validUpto').sort({ updatedAt: -1 }).populate('plan').lean();
+        }
+        res.status(200).send({
+            success: true,
+            message: `retrieved successfully!`,
+            data
+        })
+    } catch (error) {
+        console.log(error)
+        res.status(400).send({ success: false, message: error?.message })
+    }
+}
+
+module.exports = { updateLocation, updateProfile, getProfile, updateImage, updateSetting, paymentIntent, userFeedback, getPlan }
 
 
-module.exports = { updateLocation, updateProfile, getProfile, updateImage, updateSetting, paymentIntent, userFeedback }

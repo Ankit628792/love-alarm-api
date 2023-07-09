@@ -76,7 +76,7 @@ const verifyOtp = async (req, res) => {
                         success: true,
                         message: 'OTP Verified!',
                         token,
-                        onboardStep: user.status
+                        status: user.status
                     })
                 }
             }
