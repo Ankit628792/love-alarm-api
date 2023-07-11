@@ -105,7 +105,7 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
       const paymentIntentSucceeded = event.data.object;
       // Then define and call a function to handle the event payment_intent.succeeded
 
-      let order = await Orders.findOne({ paymentIntentId: paymentIntentSucceeded.id }).populate('plan', '_id amount noOfDays').lean();
+      let order = await Orders.findOne({ paymentIntentId: paymentIntentSucceeded.id }).lean().populate('plan', '_id amount noOfDays');
 
       let validity = new Date();
       validity.setDate(validity.getDate() + order.plan.noOfDays);

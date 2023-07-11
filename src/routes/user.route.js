@@ -1,11 +1,12 @@
 var express = require("express");
 var router = express.Router();
 const { authMiddleware } = require("../middleware/auth.middleware");
-const { updateLocation, updateProfile, updateImage, updateSetting, getProfile, paymentIntent, userFeedback, userMatches, getPlan } = require("../controller/user.controller");
+const { updateLocation, updateProfile, updateImage, updateSetting, getProfile, paymentIntent, userFeedback, userMatches, getPlan, referral } = require("../controller/user.controller");
 const { upload } = require("../middleware/user.middleware");
 const Rings = require("../models/ring.model");
 const Plans = require("../models/plan.model");
 const Users = require("../models/user.model");
+const { logout } = require("../controller/auth.controller");
 
 router.get('/test', (req, res) => {
     res.send('hello')
@@ -16,10 +17,12 @@ router.patch('/profile', authMiddleware, updateProfile);
 router.get('/profile', authMiddleware, getProfile);
 router.patch('/image', authMiddleware, upload.single('image'), updateImage);
 
-router.patch('/setting', authMiddleware, updateSetting)
+router.patch('/setting', authMiddleware, updateSetting);
+router.patch('/logout', authMiddleware, logout);
 
-router.post('/create-payment-intent', authMiddleware ,paymentIntent)
+router.post('/create-payment-intent', authMiddleware, paymentIntent)
 router.get('/plan', authMiddleware, getPlan);
+router.post('/referral', authMiddleware, referral);
 
 router.post('/feedback', authMiddleware, userFeedback)
 

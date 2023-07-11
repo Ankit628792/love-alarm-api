@@ -12,7 +12,7 @@ var schema = new mongoose.Schema({
         language: { type: String, default: 'en' },
         isActive: { type: Boolean, default: true }
     },
-    email: { type: String, trim: true, lowercase: true},
+    email: { type: String, trim: true, lowercase: true },
     mobile: { type: String, trim: true, unique: true, validate: hasNumber },
     name: { type: String, trim: true },
     gender: { type: String, trim: true, lowercase: true, enum: ['male', 'female', 'transgender'] },
@@ -24,7 +24,7 @@ var schema = new mongoose.Schema({
     heartId: { type: String, required: true },
     fcmToken: { type: String },
     referralCode: { type: String },
-    referrer: { type: mongoose.Schema.Types.ObjectId, ref: 'Users', required: false },
+    referred: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Users', required: false }] },
     blockedBy: {
         type: [mongoose.Schema.Types.ObjectId],
         ref: 'Users',

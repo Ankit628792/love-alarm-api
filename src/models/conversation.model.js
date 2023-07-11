@@ -2,16 +2,16 @@
 var mongoose = require('mongoose');
 
 var schema = new mongoose.Schema({
-    users: {
+    active: {
         type: [{
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Users'
         }],
-        active: { type: Boolean, default: true },
         required: true
     },
+    match: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Matches' }
 }, { timestamps: true });
 
-const Matches = mongoose.model('Matches', schema);
+const Conversations = mongoose.model('Conversations', schema);
 
-module.exports = Matches;
+module.exports = Conversations;

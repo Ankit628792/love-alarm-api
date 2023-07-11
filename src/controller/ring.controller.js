@@ -1,3 +1,4 @@
+const Conversations = require("../models/conversation.model");
 const Matches = require("../models/match.model");
 const Rings = require("../models/ring.model");
 
@@ -103,7 +104,12 @@ const handlePostRing = async ({ sender, receiver }) => {
     if (ring) {
         let match = await Matches.findOne({ users: { $all: [sender, receiver] } }).lean();
         if (!match) {
-            await Matches.create({ users: [sender, receiver] })
+            let newMatch = await Matches.create({ users: [sender, receiver] });
+            await Conversations.create({ active: [sender, receiver], match: newMatch?._id })
+        }
+        else if (!match.active) {
+            Matches.updateOne({ users: { $all: [req.user._id, req.body.receiver] } }, { active: true });
+            await Conversations.updateOne({ match: match._id }, { active: [req.user._id, req.body.receiver] })
         }
     }
 }
@@ -121,7 +127,7 @@ const ringLoveAlarm = async (req, res) => {
 
             handlePostRing({ sender: ring.sender, receiver: ring.receiver })
 
-            res.status(200).send({
+            res.status(201).send({
                 success: true,
                 message: 'Ringed Love Alarm',
             })
@@ -142,8 +148,9 @@ const pauseRinging = async (req, res) => {
                 receiver: req.body.receiver,
             }, {
                 senderVisibility: false
-            })
-            res.status(200).send({ success: true, message: 'Successfully Removed' })
+            });
+            Matches.updateOne({ users: { $all: [req.user._id, req.body.receiver] } }, { active: false });
+            res.status(200).send({ success: true, message: 'Successfully Removed' });
         }
         else if (req.body.sender) {
             await Rings.updateMany({
@@ -151,8 +158,10 @@ const pauseRinging = async (req, res) => {
                 receiver: req.user?._id,
             }, {
                 receiverVisibility: false
-            })
-            res.status(200).send({ success: true, message: 'Successfully Removed' })
+            });
+            Matches.updateOne({ users: { $all: [req.user._id, req.body.sender] } }, { active: false });
+
+            res.status(200).send({ success: true, message: 'Successfully Removed' });
         }
         else
             res.status(400).send({ success: false, message: 'Missing Params' })
@@ -166,16 +175,27 @@ const pauseRinging = async (req, res) => {
 const getMatches = async (req, res) => {
     try {
 
-        let matches = await Matches.findOne({ users: { $all: [req.user._id] } }).populate({
+        let matches = await Matches.findOne({ users: { $all: [req.user._id] }, active: true }).sort({ createdAt: -1 }).lean().populate({
             path: 'users',
             match: { 'setting.isActive': true },
-            select: '_id name image'
+            select: '_id name image heartId fcmToken'
+        });
+
+        const matchedUsers = matches.map((match) => {
+            // Find the other user in the match
+            const otherUser = match.users.find((item) => item?._id.toString() !== req?.user?._id?.toString());
+            return {
+                _id: match?._id,
+                receiver: otherUser,
+                createdAt: match.createdAt,
+                updatedAt: match.updatedAt,
+            };
         });
 
         res.status(200).send({
             success: true,
-            message: `${req.body.category} send successfully!`,
-            data: matches
+            message: `retrieved successfully!`,
+            data: matchedUsers
         })
     } catch (error) {
         console.log(error)
@@ -183,4 +203,19 @@ const getMatches = async (req, res) => {
     }
 }
 
-module.exports = { getAlarmRings, ringLoveAlarm, pauseRinging, getMatches }
+const getTotalRings = async (req, res) => {
+    try {
+        let count = await Rings.countDocuments({ receiver: req.user?._id, receiverVisibility: true });
+
+        res.status(200).send({
+            success: true,
+            message: `retrieved successfully!`,
+            count
+        })
+    } catch (error) {
+        console.log(error)
+        res.status(400).send({ success: false, message: error?.message })
+    }
+}
+
+module.exports = { getAlarmRings, ringLoveAlarm, pauseRinging, getMatches, getTotalRings }

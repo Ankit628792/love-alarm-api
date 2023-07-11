@@ -11,7 +11,7 @@ async function authMiddleware(req, res, next) {
                 let payload = validateToken(token);
                 if (payload) {
                     let deviceToken = req.headers[process.env.DEVICE_TOKEN_PAYLOAD];
-                    let user = await Users.findOne({ _id: payload._id }).populate('plan', 'name planType').lean();
+                    let user = await Users.findOne({ _id: payload._id }).lean().populate('plan', 'name planType');
                     req.user = user;
                     if (req.user) {
                         if (req.user.status == 'blocked') {
