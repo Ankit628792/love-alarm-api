@@ -7,7 +7,7 @@
 var app = require('../index');
 var debug = require('debug')('lovealarm-api:server');
 var http = require('http');
-
+const initializeSocket = require("../helpers/socket");
 /**
  * Get port from environment and store in Express.
  */
@@ -20,6 +20,12 @@ app.set('port', port);
  */
 
 var server = http.createServer(app);
+
+const io = initializeSocket(server); // Initialize Socket.io with the server
+
+io.on('connection', (socket) => {
+  console.log('A user connected'); // Log the message when a user connects
+});
 
 /**
  * Listen on provided port, on all network interfaces.

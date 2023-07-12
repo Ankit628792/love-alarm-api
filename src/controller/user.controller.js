@@ -324,16 +324,14 @@ const referral = async (req, res) => {
     try {
         if (req.body.referral) {
 
-            let user = await Users.findOne({ referralCode: req.body.referral }).lean();
+            let user = await Users.findOne({ referralCode: req.body.referral, _id: { $ne: req.user._id } }).lean();
             if (user) {
                 if (user.referred.includes(req.user?._id)) {
                     res.status(400).send({ success: false, message: 'Referral Code Already Used' })
                 }
                 else {
-                    let referralArr = [...user.referred, req.user._id]
-                    await Users.findByIdAndUpdate({ _id: user._id }, { referred: referralArr });
+                    await Users.findByIdAndUpdate({ _id: user._id }, { $push: { referred: req.user._id } });
                     try {
-
 
                         let plan = await Plans.findOne({ planType: 'referral' }).lean();
 
@@ -368,18 +366,16 @@ const referral = async (req, res) => {
 
 
                         if (order) {
+                            await Users.findByIdAndUpdate({ _id: req.user._id }, { plan: order.plan })
                             res.status(201).send({ success: true, message: 'Referral Code Applied Successfully!!' })
                         }
                         else {
-                            referralArr.length = referralArr.length - 1
-                            await Users.findByIdAndUpdate({ _id: user._id }, { referred: referralArr });
+                            await Users.findByIdAndUpdate({ _id: user._id }, { $pull: { referred: req.user._id } });
                             res.status(400).send({ success: false, message: 'Unable to Apply Referral Code' })
                         }
                     } catch (error) {
-                        referralArr.length = referralArr.length - 1
-                        await Users.findByIdAndUpdate({ _id: user._id }, { referred: referralArr });
+                        await Users.findByIdAndUpdate({ _id: user._id }, { $pull: { referred: req.user._id } });
                         res.status(400).send({ success: false, message: 'Unable to Apply Referral Code' })
-
                     }
                 }
             }
