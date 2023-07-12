@@ -7,9 +7,9 @@ var schema = new mongoose.Schema({
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Users'
         }],
-        active: { type: Boolean, default: true },
         required: true
     },
+    active: { type: Boolean, default: true },
 }, { timestamps: true });
 
 const Matches = mongoose.model('Matches', schema);

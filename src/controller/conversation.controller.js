@@ -130,7 +130,7 @@ const getMessages = async (req, res) => {
     try {
         if (req.body._id) {
 
-            let messages = await Messages.find({ conversationId: req.body._id }).lean().select('_id sender receiver message')
+            let messages = await Messages.find({ conversationId: req.body._id }).lean().select('_id sender receiver message createdAt')
 
             res.status(200).send({ success: true, message: 'Retrieved successfully!', data: messages });
         }

@@ -175,7 +175,7 @@ const pauseRinging = async (req, res) => {
 const getMatches = async (req, res) => {
     try {
 
-        let matches = await Matches.findOne({ users: { $all: [req.user._id] }, active: true }).sort({ createdAt: -1 }).lean().populate({
+        let matches = await Matches.find({ users: { $all: [req.user._id] }, active: true }).sort({ createdAt: -1 }).lean().populate({
             path: 'users',
             match: { 'setting.isActive': true },
             select: '_id name image heartId fcmToken'

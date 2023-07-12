@@ -75,13 +75,10 @@ const initializeSocket = (server) => {
             io.emit('getUsers', users);
         });
 
-        socket.on('sendMessage', async ({ sender, receiver, text }) => {
-            const user = await getUser(receiver);
+        socket.on('sendMessage', async (data) => {
+            const user = await getUser(data?.receiver);
             if (user) {
-                io.to(user.socketId).emit('getMessage', {
-                    sender,
-                    text,
-                });
+                io.to(user.socketId).emit('receiveMessage', data);
             }
         });
 
