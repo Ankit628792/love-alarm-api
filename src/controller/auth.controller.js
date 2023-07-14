@@ -21,7 +21,8 @@ const sendOtp = async (req, res) => {
             setTimeout(() => OTPs.findByIdAndUpdate({ _id: doc._id }, { isExpired: true }), 1000 * 60 * 5);
             res.status(201).send({
                 success: true,
-                message: 'OTP sent successfully!'
+                message: 'OTP sent successfully!',
+                otp: otp // remove in production
             })
         }
         else {
@@ -58,7 +59,7 @@ const verifyOtp = async (req, res) => {
                     let isUser = await Users.findOne({ mobile }).lean()
                     let user;
                     if (isUser) {
-                        user = await Users.findByIdAndUpdate({ _id: isUser._id }, { fcmToken: fcmToken }, { new: true }).lean()
+                        user = await Users.findByIdAndUpdate({ _id: isUser._id }, { 'setting.isActive': true, fcmToken: fcmToken }, { new: true }).lean()
                     }
                     else {
                         user = await Users.create({
@@ -135,4 +136,4 @@ const logout = async (req, res) => {
 }
 
 
-module.exports = { sendOtp, verifyOtp, validateUser , logout}
+module.exports = { sendOtp, verifyOtp, validateUser, logout }

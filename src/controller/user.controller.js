@@ -162,12 +162,14 @@ const updateImage = async (req, res) => {
                 // Remove the file from the local server
                 fs.unlinkSync(req.file.path);
                 await Users.findByIdAndUpdate({ _id: user._id }, { image: imageUrl }, { new: true }).lean();
-                const publicId = getPublicIdFromUrl(user.image);
-                try {
-                    // Remove the old file from the remote server
-                    cloudinary.uploader.destroy(publicId);
-                } catch (error) {
-                    console.log("Unable to delete image ", publicId)
+                if (user.image) {
+                    const publicId = getPublicIdFromUrl(user.image);
+                    try {
+                        // Remove the old file from the remote server
+                        cloudinary.uploader.destroy(publicId).then(res => console.log("file removed from remote: ", res)).catch(e => console.log("unable to remove remote file: ", e?.message));
+                    } catch (error) {
+                        console.log("Unable to delete image ", publicId)
+                    }
                 }
 
                 res.status(200).send({ success: true, data: imageUrl, message: imageVerify?.reason })
