@@ -18,16 +18,17 @@ var schema = new mongoose.Schema({
     gender: { type: String, trim: true, lowercase: true, enum: ['male', 'female', 'transgender'] },
     image: { type: String, trim: true },
     interestedIn: { type: String, trim: true, lowercase: true, enum: ['male', 'female', 'transgender'] },
-    age: { type: Number, min: 16 },
+    age: { type: Number, min: 16, default: 0 },
     dateOfBirth: { type: mongoose.Schema.Types.Date },
     onboardStep: { type: Number, default: 1, min: 1 },
     heartId: { type: String, required: true },
     fcmToken: { type: String },
     referralCode: { type: String },
-    referred: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Users', required: false }] },
+    referred: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Users', required: false }], default: [] },
     blockedBy: {
         type: [mongoose.Schema.Types.ObjectId],
         ref: 'Users',
+        default: []
     },
     location: {
         type: {
@@ -37,7 +38,7 @@ var schema = new mongoose.Schema({
         },
         coordinates: {
             type: [Number],
-            default: [0, 0],
+            default: [0, 0], // [longitude, latitude]
         },
     },
 

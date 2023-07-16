@@ -10,7 +10,7 @@ var schema = new mongoose.Schema({
             required: true
         },
         coordinates: {
-            type: [Number],
+            type: [Number], // [longitude, latitude]
             required: true
         },
     },

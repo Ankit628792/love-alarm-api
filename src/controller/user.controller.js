@@ -8,6 +8,7 @@ const Rings = require("../models/ring.model");
 const Users = require("../models/user.model");
 const fs = require('fs');
 const moment = require('moment');
+const geolib = require('geolib')
 
 const ImageURLRegex = /\/v\d+\/([^/]+)\.\w{3,6}$/;
 const getPublicIdFromUrl = (url) => {
@@ -21,20 +22,20 @@ const updateLocation = async (req, res) => {
         if (req.body.location && req.body?._id) {
             let location = {
                 type: 'Point',
-                coordinates: [req.body.location?.latitude, req.body.location?.longitude]
+                coordinates: [req.body.location?.longitude, req.body.location?.latitude]
             }
 
-            let user = await Users.findByIdAndUpdate({ _id: req.body?._id }, { location }, { new: true });
+            let user = await Users.findByIdAndUpdate({ _id: req.body?._id }, { location }, { new: true }).lean();
 
             // Find users within a 20-meter radius of the reference location
             let users = await Users.find({
                 location: {
                     $geoWithin: {
                         // [[latitude, longitude], radius in meter / Earth's radius]
-                        $centerSphere: [location.coordinates, 2000 / 6378.1] // Divide the radius (20 meters) by the Earth's radius (6378.1 km) for correct conversion
+                        $centerSphere: [location.coordinates, 10 / 6378.1] // Divide the radius (20 meters) by the Earth's radius (6378.1 km) for correct conversion
                     }
                 },
-                _id: { $nin: [user.blockedBy, user._id] },
+                _id: { $nin: [...user.blockedBy, user._id] },
                 gender: user?.interestedIn,
                 onboardStep: { $gte: 1 },
                 status: 'active',
@@ -43,6 +44,15 @@ const updateLocation = async (req, res) => {
             },
                 '_id name image heartId fcmToken location'
             ).lean()
+
+            users = users.filter(u => {
+                const distance = geolib.getDistance(
+                    { latitude: req.body.location?.latitude, longitude: req.body.location?.longitude },
+                    { latitude: u.location.coordinates[1], longitude: u.location.coordinates[0] }
+                );
+                console.log(u.name, distance)
+                return distance <= 11
+            });
 
             let data = await Promise.all(users.map(async (item) => {
                 let receiverArr = await Rings.findOne({ sender: item?._id, receiver: user?._id, receiverVisibility: true }, '_id').lean(); // logged in user is receiver
@@ -81,7 +91,7 @@ const usersNearby = async (req, res) => {
         if (req.user.location && req.user?._id) {
             let location = {
                 type: 'Point',
-                coordinates: [req.user.location?.coordinates[0], req.user.location?.coordinates[1]]
+                coordinates: req.user.location.coordinates
             }
 
             let user = req.user;
@@ -91,7 +101,7 @@ const usersNearby = async (req, res) => {
                 location: {
                     $geoWithin: {
                         // [[latitude, longitude], radius in meter / Earth's radius]
-                        $centerSphere: [location.coordinates, 2000 / 6378.1] // Divide the radius (20 meters) by the Earth's radius (6378.1 km) for correct conversion
+                        $centerSphere: [location.coordinates, 10 / 6378.1] // Divide the radius (20 meters) by the Earth's radius (6378.1 km) for correct conversion
                     }
                 },
                 _id: { $nin: [...user.blockedBy, user._id] },
@@ -102,7 +112,16 @@ const usersNearby = async (req, res) => {
                 'setting.isActive': true
             },
                 '_id name image heartId fcmToken location'
-            ).lean()
+            ).lean();
+
+
+            users = users.filter(u => {
+                const distance = geolib.getDistance(
+                    { latitude: req.body.location?.latitude, longitude: req.body.location?.longitude },
+                    { latitude: u.location.coordinates[1], longitude: u.location.coordinates[0] }
+                );
+                return distance <= 11
+            });
 
             let data = await Promise.all(users.map(async (item) => {
                 let receiverArr = await Rings.findOne({ sender: item?._id, receiver: user?._id, receiverVisibility: true }, '_id').lean(); // logged in user is receiver

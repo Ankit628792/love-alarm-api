@@ -121,7 +121,7 @@ const ringLoveAlarm = async (req, res) => {
         if (receiver && req.body.location) {
             let location = {
                 type: 'Point',
-                coordinates: [req.body.location.latitude, req.body.location.longitude]
+                coordinates: [req.body.location.longitude, req.body.location.latitude]
             }
             let ring = await insertRing({ sender, receiver, location })
 
