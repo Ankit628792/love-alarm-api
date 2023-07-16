@@ -175,22 +175,24 @@ const pauseRinging = async (req, res) => {
 const getMatches = async (req, res) => {
     try {
 
-        let matches = await Matches.find({ users: { $all: [req.user._id] }, active: true }).sort({ createdAt: -1 }).lean().populate({
+        let matches = await Matches.find({ users: { $all: [req?.user?._id] }, active: true }).sort({ createdAt: -1 }).lean().populate({
             path: 'users',
             match: { 'setting.isActive': true },
             select: '_id name image heartId fcmToken'
         });
 
-        const matchedUsers = matches.map((match) => {
+        const matchedUsers = await Promise.all(matches.map(async (match) => {
             // Find the other user in the match
             const otherUser = match.users.find((item) => item?._id.toString() !== req?.user?._id?.toString());
+            const chat = await Conversations.findOne({ match: match?._id }).lean();
             return {
                 _id: match?._id,
                 receiver: otherUser,
+                chatId: chat?._id,
                 createdAt: match.createdAt,
                 updatedAt: match.updatedAt,
             };
-        });
+        }));
 
         res.status(200).send({
             success: true,

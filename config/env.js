@@ -6,7 +6,6 @@ var envs = {
     CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
     PROTOCOL: process.env.PROTOCOL,
     HOST: process.env.HOST,
-    PORT: parseInt(process.env.PORT),
 
     DB_USERNAME: process.env.DB_USERNAME,
     DB_PASSWORD: process.env.DB_PASSWORD,

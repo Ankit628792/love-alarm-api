@@ -17,7 +17,7 @@ const getPublicIdFromUrl = (url) => {
 
 const updateLocation = async (req, res) => {
     try {
-        // console.log(req.body)
+
         if (req.body.location && req.body?._id) {
             let location = {
                 type: 'Point',
@@ -74,6 +74,67 @@ const updateLocation = async (req, res) => {
         })
     }
 }
+
+const usersNearby = async (req, res) => {
+    try {
+
+        if (req.user.location && req.user?._id) {
+            let location = {
+                type: 'Point',
+                coordinates: [req.user.location?.coordinates[0], req.user.location?.coordinates[1]]
+            }
+
+            let user = req.user;
+
+            // Find users within a 20-meter radius of the reference location
+            let users = await Users.find({
+                location: {
+                    $geoWithin: {
+                        // [[latitude, longitude], radius in meter / Earth's radius]
+                        $centerSphere: [location.coordinates, 2000 / 6378.1] // Divide the radius (20 meters) by the Earth's radius (6378.1 km) for correct conversion
+                    }
+                },
+                _id: { $nin: [...user.blockedBy, user._id] },
+                gender: user?.interestedIn,
+                onboardStep: { $gte: 1 },
+                status: 'active',
+                age: { $gte: user.age - 5, $lte: user.age + 5 },
+                'setting.isActive': true
+            },
+                '_id name image heartId fcmToken location'
+            ).lean()
+
+            let data = await Promise.all(users.map(async (item) => {
+                let receiverArr = await Rings.findOne({ sender: item?._id, receiver: user?._id, receiverVisibility: true }, '_id').lean(); // logged in user is receiver
+                let senderArr = await Rings.findOne({ receiver: item?._id, sender: user?._id, senderVisibility: true }, '_id').lean(); // logged in user is sender
+                return {
+                    ...item,
+                    isSender: receiverArr?._id ? true : false, // this user is sender and logged in is receiver 
+                    isReceiver: senderArr?._id ? true : false, // this user is receiver and logged in is sender
+                }
+            }))
+
+            res.status(200).send({
+                success: true,
+                message: 'Retrieved Successfully!',
+                data
+            })
+        }
+        else {
+            res.status(400).send({
+                success: false,
+                message: 'Missing Params'
+            })
+        }
+    } catch (error) {
+        console.log(error)
+        res.status(400).send({
+            success: false,
+            message: error?.message
+        })
+    }
+}
+
 
 const updateProfile = async (req, res) => {
     try {
@@ -394,6 +455,6 @@ const referral = async (req, res) => {
     }
 }
 
-module.exports = { updateLocation, updateProfile, getProfile, updateImage, updateSetting, paymentIntent, userFeedback, getPlan, referral }
+module.exports = { updateLocation, usersNearby, updateProfile, getProfile, updateImage, updateSetting, paymentIntent, userFeedback, getPlan, referral }
 
 

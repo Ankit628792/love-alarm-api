@@ -72,7 +72,9 @@ const getConversations = async (req, res) => {
                         users: {
                             _id: 1,
                             name: 1,
-                            image: 1
+                            image: 1,
+                            fcmToken: 1,
+                            heartId: 1
                         }
                     },
                     lastMessage: 1

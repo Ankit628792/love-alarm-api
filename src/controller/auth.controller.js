@@ -121,11 +121,19 @@ const validateUser = async (req, res) => {
 
 const logout = async (req, res) => {
     try {
-        await Users.findByIdAndUpdate({ _id: req.user._id }, { 'setting.isActive': false, fcmToken: '' })
-        res.status(200).send({
-            success: true,
-            message: 'Logged Out successfully!',
-        })
+        if (req.body._id) {
+            await Users.findByIdAndUpdate({ _id: req.body._id }, { 'setting.isActive': false, fcmToken: '' })
+            res.status(200).send({
+                success: true,
+                message: 'Logged Out successfully!',
+            })
+        }
+        else {
+            res.status(401).send({
+                success: false,
+                message: "UnAuthorized"
+            })
+        }
     } catch (error) {
         console.log(error)
         res.status(400).send({
