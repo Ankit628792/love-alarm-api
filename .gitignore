@@ -12,3 +12,5 @@ local.env
 .env
 
 zData.js
+
+mongoose: 6.11.3

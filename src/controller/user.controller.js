@@ -46,12 +46,17 @@ const updateLocation = async (req, res) => {
             ).lean()
 
             users = users.filter(u => {
-                const distance = geolib.getDistance(
-                    { latitude: req.body.location?.latitude, longitude: req.body.location?.longitude },
-                    { latitude: u.location.coordinates[1], longitude: u.location.coordinates[0] }
-                );
-                console.log(u.name, distance)
-                return distance <= 11
+                if (req.body.location?.latitude && req.body.location?.longitude && u.location.coordinates[1] && u.location.coordinates[0]) {
+                    const distance = geolib.getDistance(
+                        { latitude: req.body.location?.latitude, longitude: req.body.location?.longitude },
+                        { latitude: u.location.coordinates[1], longitude: u.location.coordinates[0] }
+                    );
+                    console.log({ me: user.name, other: u.name, distance });
+                    return distance <= 11
+                }
+                else {
+                    return false
+                }
             });
 
             let data = await Promise.all(users.map(async (item) => {
@@ -116,11 +121,16 @@ const usersNearby = async (req, res) => {
 
 
             users = users.filter(u => {
-                const distance = geolib.getDistance(
-                    { latitude: req.body.location?.latitude, longitude: req.body.location?.longitude },
-                    { latitude: u.location.coordinates[1], longitude: u.location.coordinates[0] }
-                );
-                return distance <= 11
+                if (u.location.coordinates[1] && u.location.coordinates[0]) {
+                    const distance = geolib.getDistance(
+                        { latitude: location.coordinates[1], longitude: location.coordinates[0] },
+                        { latitude: u.location.coordinates[1], longitude: u.location.coordinates[0] }
+                    );
+                    return distance <= 11
+                }
+                else {
+                    return false
+                }
             });
 
             let data = await Promise.all(users.map(async (item) => {

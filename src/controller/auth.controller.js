@@ -45,8 +45,8 @@ const verifyOtp = async (req, res) => {
         let { mobile, otp, fcmToken } = req.body
         if (mobile && otp) {
 
-            let isOtp = await OTPs.findOne({ mobile, otp: encrypt(otp, otp) }).sort({ createdAt: -1 });
-            if (isOtp) { // remove magic otp in production
+            let isOtp = await OTPs.findOne({ mobile, otp }).sort({ createdAt: -1 });
+            if (isOtp) {
 
                 if (isOtp.isExpired) {
                     res.status(200).send({

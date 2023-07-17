@@ -28,5 +28,16 @@ const getAllPlans = async (req, res) => {
     }
 }
 
+const addNotice = async (req, res) => {
+    let { icon, title, description } = req.body
+    let data = await Notices.create({
+        icon: icon || 'https://cdn-icons-png.flaticon.com/512/10281/10281551.png',
+        title: title || 'iOS App 2',
+        description: description || `Our Developer are working on iOS app. It'll be available on app store soon`
+    })
 
-module.exports = { getNotices, getAllPlans }
+    res.status(200).send(data)
+}
+
+
+module.exports = { getNotices, getAllPlans, addNotice }
