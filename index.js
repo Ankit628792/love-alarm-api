@@ -10,10 +10,11 @@ var routes = require('./src/routes')
 const { checkConsole } = require('./helpers/functions')
 const { stripe } = require('./helpers')
 const { STRIPE_WEBHOOK_SECRET } = require('./config/env')
-const Notices = require('./src/models/notice.model')
 const Orders = require('./src/models/order.model')
 const Users = require('./src/models/user.model')
 require('./config/db')
+const { validateWebhookSignature } = require('razorpay/dist/utils/razorpay-utils')
+const envs = require('./config/env')
 
 var app = express()
 
@@ -21,26 +22,27 @@ var app = express()
 app.set('views', path.join(__dirname, 'views'))
 app.set('view engine', 'jade')
 
-app.use(function (req, res, next) {
-  req.logId = uuidv4()
-  req.startTime = moment()
-  checkConsole(req, 'INFO', ['Request Received from the Client'])
-  req.on('end', function () {
-    req.responseTime = moment().diff(req.startTime, 'milliseconds')
-    checkConsole(req, 'INFO', [req.responseTime, 'Response Sent to the Client'])
-  })
-  next()
-})
+// app.use(function (req, res, next) {
+//   req.logId = uuidv4()
+//   req.startTime = moment()
+//   checkConsole(req, 'INFO', ['Request Received from the Client'])
+//   req.on('end', function () {
+//     req.responseTime = moment().diff(req.startTime, 'milliseconds')
+//     checkConsole(req, 'INFO', [req.responseTime, 'Response Sent to the Client'])
+//   })
+//   next()
+// })
+
 app.use(cors({ origin: true, credentials: true }))
 app.use((req, res, next) => {
-  if (req.originalUrl === '/webhook') {
+  if (req.originalUrl === '/webhook' || req.originalUrl === '/razorpay/webhook') {
     next(); // Do nothing with the body because I need it in a raw state.
   } else {
     express.json()(req, res, next);  // ONLY do express.json() if the received request is NOT a WebHook from Stripe.
   }
 });
 app.use((req, res, next) => {
-  if (req.originalUrl === '/webhook') {
+  if (req.originalUrl === '/webhook' || req.originalUrl === '/razorpay/webhook') {
     next();
   } else {
     express.urlencoded({ extended: false })(req, res, next);
@@ -52,17 +54,57 @@ app.use(express.static(path.join(__dirname, 'public')))
 // update membership user if expired at 00:00:00 
 // planAutomation();
 
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
   res.status(200).send({ msg: `Backend moves to active state on ${new Date().toString()}` })
 })
 
-app.get('/add', async (req, res) => {
-  let data = await Notices.create({
-    icon: 'https://cdn-icons-png.flaticon.com/512/10281/10281551.png',
-    title: 'iOS App 2',
-    description: `Our Developer are working on iOS app. It'll be available on app store soon`
-  })
-  res.status(200).send(data)
+app.post('/razorpay/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+
+  let sign = req.headers["x-razorpay-signature"];
+  let secret = envs.RAZORPAY_WEBHOOK_SECRET
+
+  try {
+    let valid = validateWebhookSignature(req.body, sign, secret);
+    if (valid) {
+      let data = JSON.parse(req.body?.toString());
+      if (data.event == 'order.paid' || data.event == 'payment.captured') {
+        let payment = data.payload.payment.entity;
+        let order = await Orders.findOne({ orderId: payment.order_id }).lean().populate('plan', '_id amount noOfDays');
+        let validity = new Date();
+        validity.setDate(validity.getDate() + order.plan.noOfDays);
+
+        let obj = {
+          status: 'completed',
+          paymentFor: 'subscription',
+          paymentAmount: payment.amount / 100,
+          paymentCurrency: payment.currency,
+          paymentMethod: payment.method,
+          orderId: payment.order_id,
+          paymentId: payment.id,
+          email: payment.email,
+          contact: payment.contact,
+          validUpto: validity,
+          metadata: payment.notes
+        }
+
+        let updatedOrder = await Orders.findOneAndUpdate({ orderId: payment.order_id }, obj, { new: true }).lean();
+
+        await Users.findByIdAndUpdate({ _id: updatedOrder.user }, { plan: updatedOrder.plan });
+      }
+      else if (data.event == 'payment.failed') {
+        await Orders.findOneAndDelete({ orderId: payment.order_id })
+      }
+    }
+
+    res.status(200).send("ok");
+
+  } catch (err) {
+    console.log("Webhook Error")
+    console.log(err)
+    res.status(400).send(`Webhook Error: ${err.message}`);
+    return;
+  }
+
 })
 
 

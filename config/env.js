@@ -26,6 +26,13 @@ var envs = {
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
 
     PRODUCTION_URL: process.env.PRODUCTION_URL,
+    EXCHANGE_RATE_API: process.env.EXCHANGE_RATE_API,
+
+    RAZORPAY_API_KEY: process.env.RAZORPAY_API_KEY,
+    RAZORPAY_SECRET_KEY: process.env.RAZORPAY_SECRET_KEY,
+    RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,
+
+    MAGIC_OTP: process.env.MAGIC_OTP
 }
 
 trimmer(envs)

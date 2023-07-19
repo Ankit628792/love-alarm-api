@@ -8,7 +8,13 @@ const Rings = require("../models/ring.model");
 const Users = require("../models/user.model");
 const fs = require('fs');
 const moment = require('moment');
-const geolib = require('geolib')
+const geolib = require('geolib');
+const Razorpay = require('razorpay');
+const { default: axios } = require("axios");
+const Matches = require("../models/match.model");
+const Conversations = require("../models/conversation.model");
+const Messages = require("../models/message.model");
+const Reports = require("../models/report.model");
 
 const ImageURLRegex = /\/v\d+\/([^/]+)\.\w{3,6}$/;
 const getPublicIdFromUrl = (url) => {
@@ -45,6 +51,8 @@ const updateLocation = async (req, res) => {
                 '_id name image heartId fcmToken location'
             ).lean()
 
+            console.log("\nUSERS FOUND ");
+
             users = users.filter(u => {
                 if (req.body.location?.latitude && req.body.location?.longitude && u.location.coordinates[1] && u.location.coordinates[0]) {
                     const distance = geolib.getDistance(
@@ -52,7 +60,7 @@ const updateLocation = async (req, res) => {
                         { latitude: u.location.coordinates[1], longitude: u.location.coordinates[0] }
                     );
                     console.log({ me: user.name, other: u.name, distance });
-                    return distance <= 11
+                    return distance <= 5
                 }
                 else {
                     return false
@@ -312,10 +320,34 @@ const paymentIntent = async (req, res) => {
         let user = req.user;
         let plan = await Plans.findOne({ _id }).lean();
 
+        let currencyCode = user?.currency || 'USD';
+
+        let amount = plan.amount;
+
+        if (currencyCode?.toLowerCase() != 'usd') {
+            let response = await axios.get(`https://api.apilayer.com/exchangerates_data/convert?to=${currencyCode}&from=USD&amount=${amount}`, { headers: { redirect: 'follow', apiKey: envs.EXCHANGE_RATE_API } })
+
+            if (response.data?.success) {
+                amount = response.data?.info?.rate?.toFixed(2);
+            }
+            else {
+                currencyCode = 'USD';
+                amount = plan.amount;
+            }
+
+            let data = {
+                success: true,
+                query: { from: 'USD', to: 'KRW', amount: 20 },
+                info: { timestamp: 1689654904, rate: 1259.464985 },
+                date: '2023-07-18',
+                result: 25189.2997
+            }
+        }
+
 
         let data = {
-            amount: plan.amount * 100,
-            currency: 'usd',
+            amount: amount * 100,
+            currency: currencyCode,
             shipping: {
                 name: 'Ankit',
                 address: {
@@ -347,8 +379,8 @@ const paymentIntent = async (req, res) => {
             status: 'pending',
             paymentFor: 'subscription',
             plan: plan._id,
-            paymentAmount: plan.amount,
-            paymentCurrency: plan.currency,
+            paymentAmount: amount,
+            paymentCurrency: currencyCode,
             paymentIntentId: paymentIntent.id
         });
 
@@ -358,6 +390,101 @@ const paymentIntent = async (req, res) => {
             paymentIntent: paymentIntent.client_secret,
             customer: user.id
         })
+    } catch (error) {
+        console.log(error)
+        res.status(400).send({ success: false, message: error?.message })
+
+    }
+}
+
+const createOrder = async (req, res) => {
+
+    try {
+        let { _id } = req.body.plan;
+        let user = req.user;
+        let plan = await Plans.findOne({ _id }).lean();
+
+        let currencyCode = user?.currency || 'USD';
+
+        let amount = plan.amount;
+
+        if (currencyCode?.toLowerCase() != 'usd') {
+            let response = await axios.get(`https://api.apilayer.com/exchangerates_data/convert?to=${currencyCode}&from=USD&amount=${amount}`, { headers: { redirect: 'follow', apiKey: envs.EXCHANGE_RATE_API } })
+
+            if (response.data?.success) {
+                amount = response.data?.info?.rate?.toFixed(2);
+            }
+            else {
+                currencyCode = 'USD';
+                amount = plan.amount;
+            }
+
+            let data = {
+                success: true,
+                query: { from: 'USD', to: 'KRW', amount: 20 },
+                info: { timestamp: 1689654904, rate: 1259.464985 },
+                date: '2023-07-18',
+                result: 25189.2997
+            }
+        }
+
+        var instance = new Razorpay({ key_id: envs.RAZORPAY_API_KEY, key_secret: envs.RAZORPAY_SECRET_KEY })
+
+        let order;
+        try {
+            order = await instance.orders.create({
+                amount: Math.round(amount * 100),
+                currency: currencyCode,
+                notes: {
+                    customer_name: user.name,
+                    customer_mobile: user.mobile,
+                }
+            })
+
+        } catch (error) {
+            console.log("order instance error ")
+            if (error.error.description == 'Currency is not supported') {
+                order = await instance.orders.create({
+                    amount: Math.round(plan.amount * 100),
+                    currency: 'USD',
+                    notes: {
+                        customer_name: user.name,
+                        customer_mobile: user.mobile,
+                    }
+                })
+            }
+            else {
+                res.status(400).send({ success: false, message: error?.message, message: "Unable to create order" })
+            }
+        }
+
+        console.log(order)
+
+        if (order.id) {
+            await Orders.create({
+                user: user?._id,
+                status: 'pending',
+                paymentFor: 'subscription',
+                plan: plan._id,
+                paymentAmount: order.amount,
+                paymentCurrency: order.currency,
+                orderId: order.id,
+                contact: user?.mobile,
+            });
+
+            res.status(201).send({
+                success: true,
+                data: {
+                    order_id: order.id,
+                    currency: order.currency,
+                    amount: order.amount
+                },
+                message: 'Order Created'
+            })
+        }
+        else
+            res.status(400).send({ success: false, message: "Unable to create order" })
+
     } catch (error) {
         console.log(error)
         res.status(400).send({ success: false, message: error?.message })
@@ -484,6 +611,76 @@ const referral = async (req, res) => {
     }
 }
 
-module.exports = { updateLocation, usersNearby, updateProfile, getProfile, updateImage, updateSetting, paymentIntent, userFeedback, getPlan, referral }
+const blockUser = async (req, res) => {
+    try {
+        if (req.user && req.body.userId) {
+            let userId = req.body.userId
+            Users.findByIdAndUpdate({ _id: userId }, { $push: { blockedBy: req.user._id } });
+            Matches.deleteMany({ users: { $all: [req?.user?._id, userId] } });
+            Conversations.deleteMany({ active: { $all: [req?.user?._id, userId] } });
+            Rings.updateMany({
+                $or: [
+                    { sender: req?.user?._id, receiver: userId },
+                    { receiver: req?.user?._id, sender: userId },
+                ]
+            },
+                {
+                    senderVisibility: false, receiverVisibility: false
+                });
+
+            Messages.deleteMany({
+                $or: [
+                    { sender: req?.user?._id, receiver: userId },
+                    { receiver: req?.user?._id, sender: userId },
+                ]
+            });
+
+            await Reports.create({
+                sender: req.user._id,
+                receiver: userId,
+                category: 'block',
+                reason: req.body.reason
+            })
+            res.status(200).send({
+                success: true,
+                message: `blocked successfully!`,
+            })
+        }
+        else {
+            res.status(400).send({ success: false, message: 'Missing Params' })
+        }
+    } catch (error) {
+        console.log(error)
+        res.status(400).send({ success: false, message: error?.message })
+    }
+}
+
+const reportUser = async (req, res) => {
+    try {
+        console.log(req.body)
+        if (req.user && req.body.userId) {
+            let userId = req.body.userId
+
+            await Reports.create({
+                sender: req.user._id,
+                receiver: userId,
+                category: 'report',
+                reason: req.body.reason
+            })
+            res.status(200).send({
+                success: true,
+                message: `reported successfully!`,
+            })
+        }
+        else {
+            res.status(400).send({ success: false, message: 'Missing Params' })
+        }
+    } catch (error) {
+        console.log(error)
+        res.status(400).send({ success: false, message: error?.message })
+    }
+}
+
+module.exports = { updateLocation, usersNearby, updateProfile, getProfile, updateImage, updateSetting, paymentIntent, createOrder, userFeedback, getPlan, referral, blockUser, reportUser }
 
 

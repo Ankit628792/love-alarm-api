@@ -1,7 +1,7 @@
 var express = require("express");
 var router = express.Router();
 const { authMiddleware } = require("../middleware/auth.middleware");
-const { updateLocation, updateProfile, updateImage, updateSetting, getProfile, paymentIntent, userFeedback, getPlan, referral, usersNearby } = require("../controller/user.controller");
+const { updateLocation, updateProfile, updateImage, updateSetting, getProfile, paymentIntent, userFeedback, getPlan, referral, usersNearby, createOrder, blockUser, reportUser } = require("../controller/user.controller");
 const { upload } = require("../middleware/user.middleware");
 const Rings = require("../models/ring.model");
 const Plans = require("../models/plan.model");
@@ -21,9 +21,12 @@ router.patch('/setting', authMiddleware, updateSetting);
 
 router.post('/create-payment-intent', authMiddleware, paymentIntent)
 router.get('/plan', authMiddleware, getPlan);
+router.post('/createOrder', authMiddleware, createOrder);
 router.post('/referral', authMiddleware, referral);
 
 router.post('/feedback', authMiddleware, userFeedback)
+router.post('/block', authMiddleware, blockUser)
+router.post('/report', authMiddleware, reportUser)
 
 
 router.get('/seeder/rings', async (req, res) => {

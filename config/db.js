@@ -2,6 +2,7 @@ var mongoose = require('mongoose');
 var envs = require('./env')
 
 // mongoose.set('debug', true);
+mongoose.set('strictQuery', true);
 
 const uri = `mongodb+srv://${envs.DB_USERNAME}:${envs.DB_PASSWORD}@${envs.DB_CLUSTER}/${envs.DB_DATABASE}?retryWrites=true&w=majority`;
 

@@ -12,6 +12,7 @@ var schema = new mongoose.Schema({
         language: { type: String, default: 'en' },
         isActive: { type: Boolean, default: true }
     },
+    currency: { type: String, default: 'USD' },
     email: { type: String, trim: true, lowercase: true },
     mobile: { type: String, trim: true, unique: true, validate: hasNumber },
     name: { type: String, trim: true },

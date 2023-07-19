@@ -9,10 +9,10 @@ var schema = new mongoose.Schema({
     paymentCurrency: { type: String, required: true },
 
     paymentMethod: { type: String },
-    payment_method_details: { type: Object },
-    paymentIntentId: { type: String },
-    paymentSuccessId: { type: String },
-    receipt: { type: String },
+    orderId: { type: String },
+    paymentId: { type: String },
+    email: { type: String },
+    contact: { type: String },
 
     validUpto: { type: Date },
 
