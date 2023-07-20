@@ -1,53 +1,6 @@
-// // const server = require('../bin/www');
-// const socket = require('socket.io');
-
-// const io = socket(server);
-
-// let users = []
-// const addUser = (user, socketId) => {
-//     !users.some((item) => item.user === user) &&
-//         users.push({ user, socketId })
-// }
-
-// const removeUser = (socketId) => {
-//     users = users.filter((user) => user.socketId !== socketId)
-// }
-
-// const getUser = (user) => {
-//     return users.find(item => item.user === user)
-// }
-
-// // when connect 
-// io.on('connection', (socket) => {
-//     console.log('a user connected')
-//     //take userId and socketId
-//     socket.on('addUser', async (user) => {
-//         await addUser(user, socket.id);
-//         io.emit('getUsers', users)
-//     })
-
-//     //send and get message
-//     socket.on('sendMessage', async ({ sender, receiver, text }) => {
-//         const user = await getUser(receiver)
-//         if (user) {
-//             io.to(user.socketId).emit('getMessage', {
-//                 sender, text
-//             })
-//         }
-//     })
-
-//     // when disconnect
-//     socket.on('disconnect', () => {
-//         removeUser(socket.id)
-//         io.emit('getUsers', users)
-//     })
-// })
-
-// module.exports = io
 
 const socket = require('socket.io');
-
-
+const { fetchUsers } = require('../src/controller/user.controller');
 
 const initializeSocket = (server) => {
     const io = socket(server);
@@ -55,8 +8,13 @@ const initializeSocket = (server) => {
     let users = [];
 
     const addUser = (user, socketId) => {
-        !users.some((item) => item.user === user) &&
+        let idx = users.findIndex(item => item.user === user)
+        if (idx > -1) {
+            users[idx].socketId = socketId
+        }
+        else {
             users.push({ user, socketId });
+        }
     };
 
     const removeUser = (socketId) => {
@@ -81,6 +39,20 @@ const initializeSocket = (server) => {
                 io.to(user.socketId).emit('receiveMessage', data);
             }
         });
+
+        socket.on("updateLocation", async (userInfo) => {
+            let start = performance.now()
+            if (userInfo) {
+                const user = await getUser(userInfo._id);
+                if (user) {
+                    if (userInfo?._id && userInfo?.location?.longitude && userInfo?.location?.latitude) {
+                        let data = await fetchUsers({ _id: userInfo?._id, longitude: userInfo.location.longitude, latitude: userInfo.location.latitude });
+                        io.to(user.socketId).emit('receiveData', data);
+                    }
+                }
+            }
+            console.log("CALL TIME ", (performance.now() - start).toFixed(2), "ms")
+        })
 
         socket.on('disconnect', () => {
             removeUser(socket.id);
