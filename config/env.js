@@ -32,7 +32,8 @@ var envs = {
     RAZORPAY_SECRET_KEY: process.env.RAZORPAY_SECRET_KEY,
     RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,
 
-    MAGIC_OTP: process.env.MAGIC_OTP
+    MAGIC_OTP: process.env.MAGIC_OTP,
+    AK: process.env.AK?.toString()
 }
 
 trimmer(envs)

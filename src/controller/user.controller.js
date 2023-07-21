@@ -351,8 +351,9 @@ const paymentIntent = async (req, res) => {
         }
 
 
+        let paymentIntent;
         let data = {
-            amount: amount * 100,
+            amount: Math.round(amount * 100),
             currency: currencyCode,
             shipping: {
                 name: 'Ankit',
@@ -378,24 +379,37 @@ const paymentIntent = async (req, res) => {
                 customer_mobile: user.mobile, // Customer's mobile
             },
         }
-        const paymentIntent = await stripe.paymentIntents.create(data);
+        try {
+            paymentIntent = await stripe.paymentIntents.create(data);
+        } catch (error) {
+            data.currency = 'USD';
+            data.amount = Math.round(plan.amount * 100)
+            paymentIntent = await stripe.paymentIntents.create(data);
+        }
 
-        let order = await Orders.create({
-            user: user?._id,
-            status: 'pending',
-            paymentFor: 'subscription',
-            plan: plan._id,
-            paymentAmount: amount,
-            paymentCurrency: currencyCode,
-            paymentIntentId: paymentIntent.id
-        });
+        if (paymentIntent.id) {
+            let order = await Orders.create({
+                user: user?._id,
+                status: 'pending',
+                paymentFor: 'subscription',
+                plan: plan._id,
+                paymentAmount: amount,
+                paymentCurrency: currencyCode,
+                paymentIntentId: paymentIntent.id
+            });
 
 
 
-        res.status(201).send({
-            paymentIntent: paymentIntent.client_secret,
-            customer: user.id
-        })
+            res.status(201).send({
+                paymentIntent: paymentIntent.client_secret,
+                customer: user.id,
+                currency: data.currency,
+                amount: data.amount
+            })
+        }
+        else
+            res.status(400).send({ success: false, message: "Unable to create order" })
+
     } catch (error) {
         console.log(error)
         res.status(400).send({ success: false, message: error?.message })
@@ -464,7 +478,6 @@ const createOrder = async (req, res) => {
             }
         }
 
-        console.log(order)
 
         if (order.id) {
             await Orders.create({
@@ -560,7 +573,7 @@ const referral = async (req, res) => {
 
                         let plan = await Plans.findOne({ planType: 'referral' }).lean();
 
-                        let isOrder = await Orders.findOne({ plan: plan._id, user: req.user._id, status: 'completed', validUpto: { $gt: new Date().toISOString() } }).sort({ updatedAt: -1 }).lean();
+                        let isOrder = await Orders.findOne({ plan: plan._id, user: user._id, status: 'completed', validUpto: { $gt: new Date().toISOString() } }).sort({ updatedAt: -1 }).lean();
 
                         let order;
 
@@ -583,12 +596,28 @@ const referral = async (req, res) => {
                                 validUpto: validity,
                                 paymentMethod: 'referral',
                                 metadata: {
+                                    customer_name: user.name,
+                                    customer_mobile: user.mobile,
+                                }
+                            });
+
+                            let myPlanValidity = new Date();
+                            myPlanValidity.setDate(myPlanValidity.getDate() + 1);
+                            await Orders.create({
+                                user: req.user?._id,
+                                status: 'completed',
+                                paymentFor: 'referral',
+                                plan: plan._id,
+                                paymentAmount: plan.amount,
+                                paymentCurrency: plan.currency,
+                                validUpto: myPlanValidity,
+                                paymentMethod: 'referral',
+                                metadata: {
                                     customer_name: req.user.name,
                                     customer_mobile: req.user.mobile,
                                 }
                             });
                         }
-
 
                         if (order) {
                             await Users.findByIdAndUpdate({ _id: req.user._id }, { plan: order.plan })
