@@ -41,17 +41,21 @@ const initializeSocket = (server) => {
         });
 
         socket.on("updateLocation", async (userInfo) => {
-            let start = performance.now()
+            // let start = Date.now()
             if (userInfo) {
                 const user = await getUser(userInfo._id);
                 if (user) {
                     if (userInfo?._id && userInfo?.location?.longitude && userInfo?.location?.latitude) {
-                        let data = await fetchUsers({ _id: userInfo?._id, longitude: userInfo.location.longitude, latitude: userInfo.location.latitude });
-                        io.to(user.socketId).emit('receiveData', data);
+                        try {
+                            let data = await fetchUsers({ _id: userInfo?._id, longitude: userInfo.location.longitude, latitude: userInfo.location.latitude });
+                            io.to(user.socketId).emit('receiveData', data);
+                        } catch (error) {
+                            console.log("fetchUsers err ")
+                        }
                     }
                 }
             }
-            console.log("CALL TIME ", (performance.now() - start).toFixed(2), "ms")
+            // console.log("CALL TIME ", (Date.now() - start).toFixed(2), "ms")
         })
 
         socket.on('disconnect', () => {

@@ -15,6 +15,7 @@ const Users = require('./src/models/user.model')
 require('./config/db')
 const { validateWebhookSignature } = require('razorpay/dist/utils/razorpay-utils')
 const envs = require('./config/env')
+const { planAutomation } = require('./helpers/automation')
 
 var app = express()
 
@@ -22,16 +23,16 @@ var app = express()
 app.set('views', path.join(__dirname, 'views'))
 app.set('view engine', 'jade')
 
-// app.use(function (req, res, next) {
-//   req.logId = uuidv4()
-//   req.startTime = moment()
-//   checkConsole(req, 'INFO', ['Request Received from the Client'])
-//   req.on('end', function () {
-//     req.responseTime = moment().diff(req.startTime, 'milliseconds')
-//     checkConsole(req, 'INFO', [req.responseTime, 'Response Sent to the Client'])
-//   })
-//   next()
-// })
+app.use(function (req, res, next) {
+  req.logId = uuidv4()
+  req.startTime = moment()
+  checkConsole(req, 'INFO', ['Request Received from the Client'])
+  req.on('end', function () {
+    req.responseTime = moment().diff(req.startTime, 'milliseconds')
+    checkConsole(req, 'INFO', [req.responseTime, 'Response Sent to the Client'])
+  })
+  next()
+})
 
 app.use(cors({ origin: true, credentials: true }))
 app.use((req, res, next) => {
@@ -51,8 +52,8 @@ app.use((req, res, next) => {
 app.use(cookieParser())
 app.use(express.static(path.join(__dirname, 'public')))
 
-// update membership user if expired at 00:00:00 
-// planAutomation();
+// update membership user if expired at 00:10:00 
+planAutomation();
 
 app.get('/', async (req, res) => {
   res.status(200).send({ msg: `Backend moves to active state on ${new Date().toString()}` })
@@ -118,6 +119,60 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
 
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
+
+    // Handle the event
+    switch (event.type) {
+      case 'payment_intent.canceled':
+        const paymentIntentCanceled = event.data.object;
+        // Then define and call a function to handle the event payment_intent.canceled
+        await Orders.findOneAndDelete({ paymentIntentId: paymentIntentCanceled.id })
+        break;
+      case 'payment_intent.created':
+        const paymentIntentCreated = event.data.object;
+        // Then define and call a function to handle the event payment_intent.created
+        break;
+      case 'payment_intent.payment_failed':
+        const paymentIntentPaymentFailed = event.data.object;
+        // Then define and call a function to handle the event payment_intent.payment_failed
+        await Orders.findOneAndDelete({ paymentIntentId: paymentIntentPaymentFailed.id })
+
+        break;
+      case 'payment_intent.succeeded':
+        const paymentIntentSucceeded = event.data.object;
+        // Then define and call a function to handle the event payment_intent.succeeded
+
+        let order = await Orders.findOne({ paymentIntentId: paymentIntentSucceeded.id }).lean().populate('plan', '_id amount noOfDays');
+
+        let validity = new Date();
+        validity.setDate(validity.getDate() + order.plan.noOfDays);
+
+        let obj = {
+          status: 'completed',
+          paymentAmount: paymentIntentSucceeded.amount_received / 100,
+          paymentCurrency: paymentIntentSucceeded.currency,
+
+          paymentMethod: paymentIntentSucceeded.payment_method,
+          payment_method_details: paymentIntentSucceeded.charges.data[0].payment_method_details,
+          paymentIntentId: paymentIntentSucceeded.id,
+          paymentSuccessId: event.id,
+          receipt: paymentIntentSucceeded.charges.data[0].receipt_url,
+
+          validUpto: validity,
+
+          metadata: {
+            customer_name: paymentIntentSucceeded.metadata.customer_name,
+            customer_mobile: paymentIntentSucceeded.metadata.customer_mobile
+          }
+        }
+
+        let updatedOrder = await Orders.findOneAndUpdate({ paymentIntentId: paymentIntentSucceeded.id }, obj, { new: true }).lean();
+        await Users.findByIdAndUpdate({ _id: updatedOrder.user }, { plan: updatedOrder.plan })
+        break;
+      // ... handle other event types
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+    }
+
   } catch (err) {
     console.log("Webhook Error")
     console.log(err)
@@ -125,59 +180,6 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
     return;
   }
 
-
-  // Handle the event
-  switch (event.type) {
-    case 'payment_intent.canceled':
-      const paymentIntentCanceled = event.data.object;
-      // Then define and call a function to handle the event payment_intent.canceled
-      await Orders.findOneAndDelete({ paymentIntentId: paymentIntentCanceled.id })
-      break;
-    case 'payment_intent.created':
-      const paymentIntentCreated = event.data.object;
-      // Then define and call a function to handle the event payment_intent.created
-      break;
-    case 'payment_intent.payment_failed':
-      const paymentIntentPaymentFailed = event.data.object;
-      // Then define and call a function to handle the event payment_intent.payment_failed
-      await Orders.findOneAndDelete({ paymentIntentId: paymentIntentPaymentFailed.id })
-
-      break;
-    case 'payment_intent.succeeded':
-      const paymentIntentSucceeded = event.data.object;
-      // Then define and call a function to handle the event payment_intent.succeeded
-
-      let order = await Orders.findOne({ paymentIntentId: paymentIntentSucceeded.id }).lean().populate('plan', '_id amount noOfDays');
-
-      let validity = new Date();
-      validity.setDate(validity.getDate() + order.plan.noOfDays);
-
-      let obj = {
-        status: 'completed',
-        paymentAmount: paymentIntentSucceeded.amount_received / 100,
-        paymentCurrency: paymentIntentSucceeded.currency,
-
-        paymentMethod: paymentIntentSucceeded.payment_method,
-        payment_method_details: paymentIntentSucceeded.charges.data[0].payment_method_details,
-        paymentIntentId: paymentIntentSucceeded.id,
-        paymentSuccessId: event.id,
-        receipt: paymentIntentSucceeded.charges.data[0].receipt_url,
-
-        validUpto: validity,
-
-        metadata: {
-          customer_name: paymentIntentSucceeded.metadata.customer_name,
-          customer_mobile: paymentIntentSucceeded.metadata.customer_mobile
-        }
-      }
-
-      let updatedOrder = await Orders.findOneAndUpdate({ paymentIntentId: paymentIntentSucceeded.id }, obj, { new: true }).lean();
-      await Users.findByIdAndUpdate({ _id: updatedOrder.user }, { plan: updatedOrder.plan })
-      break;
-    // ... handle other event types
-    default:
-      console.log(`Unhandled event type ${event.type}`);
-  }
   // Return a 200 res to acknowledge receipt of the event
   res.send();
 });

@@ -185,13 +185,15 @@ const getMatches = async (req, res) => {
             // Find the other user in the match
             const otherUser = match.users.find((item) => item?._id.toString() !== req?.user?._id?.toString());
             const chat = await Conversations.findOne({ match: match?._id }).lean();
-            return {
-                _id: match?._id,
-                receiver: otherUser,
-                chatId: chat?._id,
-                createdAt: match.createdAt,
-                updatedAt: match.updatedAt,
-            };
+            if (otherUser) {
+                return {
+                    _id: match?._id,
+                    receiver: otherUser,
+                    chatId: chat?._id,
+                    createdAt: match.createdAt,
+                    updatedAt: match.updatedAt,
+                };
+            }
         }));
 
         res.status(200).send({

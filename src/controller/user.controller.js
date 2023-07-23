@@ -30,51 +30,58 @@ const fetchUsers = async ({ _id, longitude, latitude }) => {
 
     let user = await Users.findByIdAndUpdate({ _id: _id }, { location }, { new: true }).lean();
 
-    // Find users within a 20-meter radius of the reference location
-    let users = await Users.find({
-        location: {
-            $geoWithin: {
-                // [[latitude, longitude], radius in meter / Earth's radius]
-                $centerSphere: [location.coordinates, 10 / 6378.1] // Divide the radius (20 meters) by the Earth's radius (6378.1 km) for correct conversion
-            }
+    if (user) {
+        if (!user.blockedBy) {
+            user.blockedBy = []
+        }
+
+        // Find users within a 20-meter radius of the reference location
+        let users = await Users.find({
+            location: {
+                $geoWithin: {
+                    // [[latitude, longitude], radius in meter / Earth's radius]
+                    $centerSphere: [location.coordinates, 10 / 6378.1] // Divide the radius (20 meters) by the Earth's radius (6378.1 km) for correct conversion
+                }
+            },
+            _id: { $nin: [...user.blockedBy, user._id] },
+            gender: user?.interestedIn,
+            onboardStep: { $gte: 1 },
+            status: 'active',
+            'setting.isActive': true,
+            age: { $gte: user.age - 5, $lte: user.age + 5 },
         },
-        _id: { $nin: [...user.blockedBy, user._id] },
-        gender: user?.interestedIn,
-        onboardStep: { $gte: 1 },
-        status: 'active',
-        age: { $gte: user.age - 5, $lte: user.age + 5 },
-        'setting.isActive': true
-    },
-        '_id name image heartId fcmToken location'
-    ).lean()
+            '_id name image heartId fcmToken location'
+        ).lean()
 
-    console.log("\nUSERS FOUND ");
+        // console.log("\nUSERS FOUND ");
 
-    users = users.filter(u => {
-        if (latitude && longitude && u.location.coordinates[1] && u.location.coordinates[0]) {
-            const distance = geolib.getDistance(
-                { latitude: latitude, longitude: longitude },
-                { latitude: u.location.coordinates[1], longitude: u.location.coordinates[0] }
-            );
-            console.log({ me: user.name, other: u.name, distance });
-            return distance <= 5
-        }
-        else {
-            return false
-        }
-    });
+        users = users.filter(u => {
+            if (latitude && longitude && u.location.coordinates[1] && u.location.coordinates[0]) {
+                const distance = geolib.getDistance(
+                    { latitude: latitude, longitude: longitude },
+                    { latitude: u.location.coordinates[1], longitude: u.location.coordinates[0] }
+                );
+                // console.log({ me: user.name, other: u.name, distance });
+                return distance <= 5
+            }
+            else {
+                return false
+            }
+        });
 
-    let data = await Promise.all(users.map(async (item) => {
-        let receiverArr = await Rings.findOne({ sender: item?._id, receiver: user?._id, receiverVisibility: true }, '_id').lean(); // logged in user is receiver
-        let senderArr = await Rings.findOne({ receiver: item?._id, sender: user?._id, senderVisibility: true }, '_id').lean(); // logged in user is sender
-        return {
-            ...item,
-            isSender: receiverArr?._id ? true : false, // this user is sender and logged in is receiver 
-            isReceiver: senderArr?._id ? true : false, // this user is receiver and logged in is sender
-        }
-    }))
+        let data = await Promise.all(users.map(async (item) => {
+            let receiverArr = await Rings.findOne({ sender: item?._id, receiver: user?._id, receiverVisibility: true }, '_id').lean(); // logged in user is receiver
+            let senderArr = await Rings.findOne({ receiver: item?._id, sender: user?._id, senderVisibility: true }, '_id').lean(); // logged in user is sender
+            return {
+                ...item,
+                isSender: receiverArr?._id ? true : false, // this user is sender and logged in is receiver 
+                isReceiver: senderArr?._id ? true : false, // this user is receiver and logged in is sender
+            }
+        }))
 
-    return data
+        return data
+    }
+    else return []
 }
 
 const updateLocation = async (req, res) => {
@@ -114,6 +121,9 @@ const usersNearby = async (req, res) => {
             }
 
             let user = req.user;
+            if (!user.blockedBy) {
+                user.blockedBy = []
+            }
 
             // Find users within a 20-meter radius of the reference location
             let users = await Users.find({
@@ -127,8 +137,8 @@ const usersNearby = async (req, res) => {
                 gender: user?.interestedIn,
                 onboardStep: { $gte: 1 },
                 status: 'active',
+                'setting.isActive': true,
                 age: { $gte: user.age - 5, $lte: user.age + 5 },
-                'setting.isActive': true
             },
                 '_id name image heartId fcmToken location'
             ).lean();
@@ -170,7 +180,6 @@ const usersNearby = async (req, res) => {
             })
         }
     } catch (error) {
-        console.log(error)
         res.status(400).send({
             success: false,
             message: error?.message
@@ -183,11 +192,12 @@ const updateProfile = async (req, res) => {
     try {
         if (req.user?._id) {
             let body = req.body;
+
             if (body.dateOfBirth) {
                 let age = moment().diff(moment(body.dateOfBirth), 'years');
                 body.age = age
             }
-            const user = await Users.findByIdAndUpdate({ _id: req?.user?._id }, req.body, { new: true });
+            const user = await Users.findByIdAndUpdate({ _id: req?.user?._id }, body, { new: true });
             res.status(200).send({
                 success: true,
                 message: 'Profile Updated Successfully!'
@@ -326,15 +336,16 @@ const paymentIntent = async (req, res) => {
         let user = req.user;
         let plan = await Plans.findOne({ _id }).lean();
 
-        let currencyCode = user?.currency || 'USD';
+        let currencyCode = user?.currency?.toUpperCase() || 'USD';
 
         let amount = plan.amount;
 
-        if (currencyCode?.toLowerCase() != 'usd') {
+        if (currencyCode === 'INR') {
             let response = await axios.get(`https://api.apilayer.com/exchangerates_data/convert?to=${currencyCode}&from=USD&amount=${amount}`, { headers: { redirect: 'follow', apiKey: envs.EXCHANGE_RATE_API } })
 
             if (response.data?.success) {
-                amount = response.data?.info?.rate?.toFixed(2);
+                console.log(response.data)
+                amount = response.data?.result?.toFixed(2);
             }
             else {
                 currencyCode = 'USD';
@@ -353,7 +364,7 @@ const paymentIntent = async (req, res) => {
 
         let paymentIntent;
         let data = {
-            amount: Math.round(amount * 100),
+            amount: Math.round(amount * (['USD', 'INR'].includes(currencyCode) ? 100 : 1)),
             currency: currencyCode,
             shipping: {
                 name: 'Ankit',
@@ -432,7 +443,7 @@ const createOrder = async (req, res) => {
             let response = await axios.get(`https://api.apilayer.com/exchangerates_data/convert?to=${currencyCode}&from=USD&amount=${amount}`, { headers: { redirect: 'follow', apiKey: envs.EXCHANGE_RATE_API } })
 
             if (response.data?.success) {
-                amount = response.data?.info?.rate?.toFixed(2);
+                amount = response.data?.result?.toFixed(2);
             }
             else {
                 currencyCode = 'USD';
@@ -563,8 +574,9 @@ const referral = async (req, res) => {
         if (req.body.referral) {
 
             let user = await Users.findOne({ referralCode: req.body.referral, _id: { $ne: req.user._id } }).lean();
+            console.log(568, "   ", user)
             if (user) {
-                if (user.referred.includes(req.user?._id)) {
+                if (user.referred?.includes(req.user?._id)) {
                     res.status(400).send({ success: false, message: 'Referral Code Already Used' })
                 }
                 else {
@@ -575,6 +587,8 @@ const referral = async (req, res) => {
 
                         let isOrder = await Orders.findOne({ plan: plan._id, user: user._id, status: 'completed', validUpto: { $gt: new Date().toISOString() } }).sort({ updatedAt: -1 }).lean();
 
+                        console.log(581, "   ", isOrder)
+
                         let order;
 
                         if (isOrder) {
@@ -582,10 +596,12 @@ const referral = async (req, res) => {
                             validity.setDate(validity.getDate() + plan.noOfDays);
 
                             order = await Orders.findByIdAndUpdate({ _id: isOrder._id }, { validUpto: validity }, { new: true }).lean()
+
+                            console.log(591, "   ", order)
                         }
                         else {
                             let validity = new Date();
-                            validity.setDate(validity.getDate() + order.plan.noOfDays);
+                            validity.setDate(validity.getDate() + plan.noOfDays);
                             order = await Orders.create({
                                 user: user?._id,
                                 status: 'completed',
@@ -600,10 +616,15 @@ const referral = async (req, res) => {
                                     customer_mobile: user.mobile,
                                 }
                             });
+                            if (order) {
+                                await Users.findByIdAndUpdate({ _id: user._id }, { plan: order.plan })
+                            }
+
+                            console.log(611, "   ", order)
 
                             let myPlanValidity = new Date();
                             myPlanValidity.setDate(myPlanValidity.getDate() + 1);
-                            await Orders.create({
+                            let mine = await Orders.create({
                                 user: req.user?._id,
                                 status: 'completed',
                                 paymentFor: 'referral',
@@ -617,17 +638,21 @@ const referral = async (req, res) => {
                                     customer_mobile: req.user.mobile,
                                 }
                             });
+
+                            console.log(630, "   ", mine)
+
                         }
 
                         if (order) {
                             await Users.findByIdAndUpdate({ _id: req.user._id }, { plan: order.plan })
-                            res.status(201).send({ success: true, message: 'Referral Code Applied Successfully!!' })
+                            res.status(201).send({ success: true, message: 'Code Applied Successfully!!' })
                         }
                         else {
                             await Users.findByIdAndUpdate({ _id: user._id }, { $pull: { referred: req.user._id } });
                             res.status(400).send({ success: false, message: 'Unable to Apply Referral Code' })
                         }
                     } catch (error) {
+                        console.log("643 err ", error)
                         await Users.findByIdAndUpdate({ _id: user._id }, { $pull: { referred: req.user._id } });
                         res.status(400).send({ success: false, message: 'Unable to Apply Referral Code' })
                     }
