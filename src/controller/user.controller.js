@@ -62,7 +62,7 @@ const fetchUsers = async ({ _id, longitude, latitude }) => {
                     { latitude: u.location.coordinates[1], longitude: u.location.coordinates[0] }
                 );
                 // console.log({ me: user.name, other: u.name, distance });
-                return distance <= 5
+                return distance <= 10
             }
             else {
                 return false

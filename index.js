@@ -23,16 +23,16 @@ var app = express()
 app.set('views', path.join(__dirname, 'views'))
 app.set('view engine', 'jade')
 
-app.use(function (req, res, next) {
-  req.logId = uuidv4()
-  req.startTime = moment()
-  checkConsole(req, 'INFO', ['Request Received from the Client'])
-  req.on('end', function () {
-    req.responseTime = moment().diff(req.startTime, 'milliseconds')
-    checkConsole(req, 'INFO', [req.responseTime, 'Response Sent to the Client'])
-  })
-  next()
-})
+// app.use(function (req, res, next) {
+//   req.logId = uuidv4()
+//   req.startTime = moment()
+//   checkConsole(req, 'INFO', ['Request Received from the Client'])
+//   req.on('end', function () {
+//     req.responseTime = moment().diff(req.startTime, 'milliseconds')
+//     checkConsole(req, 'INFO', [req.responseTime, 'Response Sent to the Client'])
+//   })
+//   next()
+// })
 
 app.use(cors({ origin: true, credentials: true }))
 app.use((req, res, next) => {

@@ -1,6 +1,7 @@
 const envs = require("../../config/env");
 const { encrypt, decrypt, createAccessToken } = require("../../helpers");
 const { generateOTP, sendOTPSms, generateHeartId, generateReferralCode } = require("../../helpers/functions");
+const Orders = require("../models/order.model");
 const OTPs = require("../models/otp.model");
 const Plans = require("../models/plan.model");
 const Users = require("../models/user.model");
@@ -53,7 +54,7 @@ const verifyOtp = async (req, res) => {
                     })
                 }
                 else {
-                    let plan = await Plans.findOne({ planType: 'free' })
+                    let plan = await Plans.findOne({ planType: 'subscription', amount: 10 })
                     let isUser = await Users.findOne({ mobile }).lean()
                     let user;
 
@@ -75,6 +76,22 @@ const verifyOtp = async (req, res) => {
                             referralCode: generateReferralCode(),
                             currency
                         })
+
+                        let validity = new Date();
+                        validity.setDate(validity.getDate() + plan.noOfDays);
+                        await Orders.create({
+                            user: user?._id,
+                            status: 'completed',
+                            paymentFor: 'subscription',
+                            plan: plan._id,
+                            paymentAmount: plan.amount,
+                            paymentCurrency: plan.currency,
+                            validUpto: validity,
+                            paymentMethod: 'new sign up',
+                            metadata: {
+                                customer_mobile: user.mobile,
+                            }
+                        });
                     }
 
                     await OTPs.deleteMany({ mobile: mobile });
