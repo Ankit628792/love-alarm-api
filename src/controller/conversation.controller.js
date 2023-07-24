@@ -145,14 +145,16 @@ const getMessages = async (req, res) => {
     }
 }
 
+const insertMessage = async ({ sender, receiver, message, conversationId }) => await Messages.create({
+    sender, receiver, message, conversationId, active: [sender, receiver]
+})
+
 const addMessage = async (req, res) => {
     try {
         let { conversationId, sender, receiver, text } = req.body;
 
         if (conversationId && sender && receiver && text) {
-            let message = await Messages.create({
-                sender, receiver, message: text, conversationId, active: [sender, receiver]
-            })
+            let message = await insertMessage({ sender, receiver, message: text, conversationId })
             res.status(201).send({ success: true, message: 'Sent successfully!', data: message });
 
         }
@@ -184,4 +186,4 @@ const clearMessages = async (req, res) => {
     }
 }
 
-module.exports = { getConversations, updateConversation, getMessages, addMessage, clearMessages }
+module.exports = { getConversations, updateConversation, getMessages, addMessage, clearMessages, insertMessage }

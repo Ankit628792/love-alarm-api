@@ -1,6 +1,7 @@
 
 const socket = require('socket.io');
 const { fetchUsers } = require('../src/controller/user.controller');
+const { insertMessage } = require('../src/controller/conversation.controller');
 
 const initializeSocket = (server) => {
     const io = socket(server);
@@ -34,6 +35,7 @@ const initializeSocket = (server) => {
         });
 
         socket.on('sendMessage', async (data) => {
+            await insertMessage(data);
             const user = await getUser(data?.receiver);
             if (user) {
                 io.to(user.socketId).emit('receiveMessage', data);

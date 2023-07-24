@@ -16,7 +16,7 @@ const getNotices = async (req, res) => {
 const getAllPlans = async (req, res) => {
     try {
 
-        let data = await Plans.find({ amount: { $gt: 10 } });
+        let data = await Plans.find({ amount: { $ne: 10 } });
         res.status(200).send({
             success: true,
             message: `retrieved successfully!`,
