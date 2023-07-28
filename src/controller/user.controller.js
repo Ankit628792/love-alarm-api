@@ -574,7 +574,6 @@ const referral = async (req, res) => {
         if (req.body.referral) {
 
             let user = await Users.findOne({ referralCode: req.body.referral, _id: { $ne: req.user._id } }).lean();
-            console.log(568, "   ", user)
             if (user) {
                 if (user.referred?.includes(req.user?._id)) {
                     res.status(400).send({ success: false, message: 'Referral Code Already Used' })
@@ -586,9 +585,6 @@ const referral = async (req, res) => {
                         let plan = await Plans.findOne({ planType: 'referral' }).lean();
 
                         let isOrder = await Orders.findOne({ plan: plan._id, user: user._id, status: 'completed', validUpto: { $gt: new Date().toISOString() } }).sort({ updatedAt: -1 }).lean();
-
-                        console.log(581, "   ", isOrder)
-
                         let order;
 
                         if (isOrder) {
@@ -596,8 +592,6 @@ const referral = async (req, res) => {
                             validity.setDate(validity.getDate() + plan.noOfDays);
 
                             order = await Orders.findByIdAndUpdate({ _id: isOrder._id }, { validUpto: validity }, { new: true }).lean()
-
-                            console.log(591, "   ", order)
                         }
                         else {
                             let validity = new Date();
@@ -620,8 +614,6 @@ const referral = async (req, res) => {
                                 await Users.findByIdAndUpdate({ _id: user._id }, { plan: order.plan })
                             }
 
-                            console.log(611, "   ", order)
-
                             let myPlanValidity = new Date();
                             myPlanValidity.setDate(myPlanValidity.getDate() + 1);
                             let mine = await Orders.create({
@@ -638,9 +630,6 @@ const referral = async (req, res) => {
                                     customer_mobile: req.user.mobile,
                                 }
                             });
-
-                            console.log(630, "   ", mine)
-
                         }
 
                         if (order) {
@@ -652,7 +641,6 @@ const referral = async (req, res) => {
                             res.status(400).send({ success: false, message: 'Unable to Apply Referral Code' })
                         }
                     } catch (error) {
-                        console.log("643 err ", error)
                         await Users.findByIdAndUpdate({ _id: user._id }, { $pull: { referred: req.user._id } });
                         res.status(400).send({ success: false, message: 'Unable to Apply Referral Code' })
                     }

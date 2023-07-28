@@ -222,4 +222,4 @@ const getTotalRings = async (req, res) => {
     }
 }
 
-module.exports = { getAlarmRings, ringLoveAlarm, pauseRinging, getMatches, getTotalRings }
+module.exports = { getAlarmRings, ringLoveAlarm, pauseRinging, getMatches, getTotalRings , insertRing, handlePostRing}

@@ -16,6 +16,8 @@ require('./config/db')
 const { validateWebhookSignature } = require('razorpay/dist/utils/razorpay-utils')
 const envs = require('./config/env')
 const { planAutomation } = require('./helpers/automation')
+const { handlePostRing, insertRing } = require('./src/controller/ring.controller')
+const automation = require('./helpers/automation')
 
 var app = express()
 
@@ -39,7 +41,7 @@ app.use((req, res, next) => {
   if (req.originalUrl === '/webhook' || req.originalUrl === '/razorpay/webhook') {
     next(); // Do nothing with the body because I need it in a raw state.
   } else {
-    express.json()(req, res, next);  // ONLY do express.json() if the received request is NOT a WebHook from Stripe.
+    express.json()(req, res, next);  // ONLY do express.json() if the received request is NOT a WebHook.
   }
 });
 app.use((req, res, next) => {
@@ -52,10 +54,33 @@ app.use((req, res, next) => {
 app.use(cookieParser())
 app.use(express.static(path.join(__dirname, 'public')))
 
-// update membership user if expired at 00:10:00 
-planAutomation();
+// automation to save storage
+automation();
 
 app.get('/', async (req, res) => {
+  let users = await Users.find({ gender: 'female' }).lean();
+  let location2 = {
+    type: 'Point',
+    coordinates: [77.0143954, 28.5937408]
+  }
+
+  // for (let item of users) {
+  //   await Users.updateOne({ _id: item._id }, { location: location2 }, {new :true}).then(res => console.log(res))
+  // }
+
+  // for (let item of users) {
+
+  //   let sender = item._id
+  //   let receiver = '64a95d15f004787bafd4244d'
+  //   let location = {
+  //     type: 'Point',
+  //     coordinates: [77.0143673 * (1 + Math.random() / 10000), 28.5937303 * (1 + Math.random() / 10000)]
+  //   }
+  //   let ring = await insertRing({ sender, receiver, location })
+
+  //   handlePostRing({ sender: ring.sender, receiver: ring.receiver })
+  // }
+
   res.status(200).send({ msg: `Backend moves to active state on ${new Date().toString()}` })
 })
 
