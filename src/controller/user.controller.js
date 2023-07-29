@@ -344,6 +344,7 @@ const paymentIntent = async (req, res) => {
             let response = await axios.get(`https://api.apilayer.com/exchangerates_data/convert?to=${currencyCode}&from=USD&amount=${amount}`, { headers: { redirect: 'follow', apiKey: envs.EXCHANGE_RATE_API } })
 
             if (response.data?.success) {
+                console.log("\nby ", user.name)
                 console.log(response.data)
                 amount = response.data?.result?.toFixed(2);
             }
@@ -359,6 +360,10 @@ const paymentIntent = async (req, res) => {
                 date: '2023-07-18',
                 result: 25189.2997
             }
+        }
+        else {
+            currencyCode = 'USD';
+            amount = plan.amount;
         }
 
 
@@ -409,8 +414,6 @@ const paymentIntent = async (req, res) => {
                 paymentIntentId: paymentIntent.id
             });
 
-
-
             res.status(201).send({
                 paymentIntent: paymentIntent.client_secret,
                 customer: user.id,
@@ -443,6 +446,8 @@ const createOrder = async (req, res) => {
             let response = await axios.get(`https://api.apilayer.com/exchangerates_data/convert?to=${currencyCode}&from=USD&amount=${amount}`, { headers: { redirect: 'follow', apiKey: envs.EXCHANGE_RATE_API } })
 
             if (response.data?.success) {
+                console.log("\nby ", user.name)
+                console.log(response.data)
                 amount = response.data?.result?.toFixed(2);
             }
             else {

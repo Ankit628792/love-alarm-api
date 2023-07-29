@@ -33,7 +33,12 @@ var envs = {
     RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,
 
     MAGIC_OTP: process.env.MAGIC_OTP,
-    AK: process.env.AK?.toString()
+    AK: process.env.AK?.toString(),
+    MAIL_ID: process.env.MAIL_ID,
+    MAIL_PASSWORD: process.env.MAIL_PASSWORD,
+
+    TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
+    TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN
 }
 
 trimmer(envs)

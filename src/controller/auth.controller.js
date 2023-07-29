@@ -1,5 +1,5 @@
 const envs = require("../../config/env");
-const { encrypt, decrypt, createAccessToken } = require("../../helpers");
+const { encrypt, decrypt, createAccessToken, sendTwilioOTP } = require("../../helpers");
 const { generateOTP, sendOTPSms, generateHeartId, generateReferralCode } = require("../../helpers/functions");
 const Orders = require("../models/order.model");
 const OTPs = require("../models/otp.model");
@@ -11,19 +11,18 @@ const sendOtp = async (req, res) => {
     try {
         if (req.body.mobile) {
             let otp = generateOTP();
-            var message = `Your OTP to verify number on Love Alarm is <#> ${otp} ${req.body.hash} valid for next 5 minutes. Do not share this OTP with anyone`
+            var message = `Dear User, Your OTP to verify number on Love Alarm 2.0 is <#> ${otp} ${req.body.hash || ''} valid for next 5 minutes. Do not share this OTP with anyone`
             // await sendOTPSms({ message: message, numbers: [req.body.mobile] })
+            sendTwilioOTP({ mobile: req.body.mobile, message })
             console.log(otp)
             let doc = await OTPs.create({
                 mobile: req.body.mobile,
-                otp: encrypt(otp?.toString(), otp?.toString()),
-                realOTP: otp  // will be removed in production
+                otp: encrypt(otp?.toString(), otp?.toString())
             })
             setTimeout(() => OTPs.findByIdAndUpdate({ _id: doc._id }, { isExpired: true }), 1000 * 60 * 5);
             res.status(201).send({
                 success: true,
-                message: 'OTP sent successfully!',
-                otp: otp // remove in production
+                message: 'OTP sent successfully!'
             })
         }
         else {

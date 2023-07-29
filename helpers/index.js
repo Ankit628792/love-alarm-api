@@ -3,6 +3,8 @@ var bcrypt = require('bcryptjs');
 var envs = require('../config/env')
 const cloudinary = require('cloudinary').v2;
 
+const twilio = require('twilio')(envs.TWILIO_ACCOUNT_SID, envs.TWILIO_AUTH_TOKEN);
+
 const stripe = require('stripe')(envs.STRIPE_SECRET)
 
 var controller = {}
@@ -13,6 +15,25 @@ cloudinary.config({
     api_key: envs.CLOUDINARY_API_KEY,
     api_secret: envs.CLOUDINARY_API_SECRET
 });
+
+function sendTwilioOTP({ mobile, message }) {
+    try {
+        twilio.messages
+            .create({
+                body: message,
+                from: '+17623394823',
+                to: mobile
+            })
+            .then(message => console.log(message.sid))
+            .catch(e => {
+                console.log("TWILIO ERROR");
+                console.log(e)
+            })
+    } catch (error) {
+        console.log("TWILIO SERVER ERROR");
+        console.log(e)
+    }
+}
 
 
 function encryptString(string) {
@@ -72,5 +93,6 @@ controller.encrypt = encrypt
 controller.decrypt = decrypt
 controller.cloudinary = cloudinary
 controller.stripe = stripe
+controller.sendTwilioOTP = sendTwilioOTP
 
 module.exports = controller

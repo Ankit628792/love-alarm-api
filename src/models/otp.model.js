@@ -4,7 +4,6 @@ const { AES } = require('crypto-js');
 var schema = new mongoose.Schema({
     mobile: { type: String, trim: true, required: true },
     otp: { type: String, trim: true, required: true },
-    realOTP: { type: String, trim: true, required: true }, // remove in production
     isExpired: { type: Boolean, default: false }
 }, { timestamps: true });
 
