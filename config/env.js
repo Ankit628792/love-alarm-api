@@ -37,8 +37,8 @@ var envs = {
     MAIL_ID: process.env.MAIL_ID,
     MAIL_PASSWORD: process.env.MAIL_PASSWORD,
 
-    TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
-    TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN
+    BIRD_API_KEY: process.env.BIRD_API_KEY,
+    BIRD_ORIGINATOR: process.env.BIRD_ORIGINATOR,
 }
 
 trimmer(envs)

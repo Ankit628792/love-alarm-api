@@ -32,14 +32,14 @@ app.set('view engine', 'jade')
 
 app.use(cors({ origin: true, credentials: true }))
 app.use((req, res, next) => {
-  if (req.originalUrl === '/webhook' || req.originalUrl === '/razorpay/webhook') {
+  if ((req.originalUrl).includes('/api/v2/webhook')) {
     next(); // Do nothing with the body because I need it in a raw state.
   } else {
     express.json()(req, res, next);  // ONLY do express.json() if the received request is NOT a WebHook.
   }
 });
 app.use((req, res, next) => {
-  if (req.originalUrl === '/webhook' || req.originalUrl === '/razorpay/webhook') {
+  if ((req.originalUrl).includes('/api/v2/webhook')) {
     next();
   } else {
     express.urlencoded({ extended: false })(req, res, next);

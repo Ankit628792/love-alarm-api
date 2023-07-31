@@ -29,9 +29,12 @@ function sendOTPSms(data) {
         senderId: envs.SMS_API_SENDER_ID,
         "templateId": "1707161130464243591"
     }
-    console.log('sms body',body)
-    return axios.post(envs.SMS_API_END_POINT, body)
+
+    console.log(body)
+
+    return axios.post(envs.SMS_API_END_POINT, body).then(res => console.log(res)).catch(e => console.log("err ", e))
 }
+
 
 function sendTransSms(data) {
     let body = {
