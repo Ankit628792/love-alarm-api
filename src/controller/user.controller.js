@@ -21,6 +21,7 @@ const getPublicIdFromUrl = (url) => {
     const match = url.match(ImageURLRegex);
     return match ? match[1] : null;
 };
+const getPublicId = (imageURL) => imageURL.split("/").pop().split(".")[0];
 
 const fetchUsers = async ({ _id, longitude, latitude }) => {
     let location = {
@@ -277,10 +278,10 @@ const updateImage = async (req, res) => {
                 fs.unlinkSync(req.file.path);
                 await Users.findByIdAndUpdate({ _id: user._id }, { image: imageUrl }, { new: true }).lean();
                 if (user.image) {
-                    const publicId = getPublicIdFromUrl(user.image);
+                    const publicId = getPublicId(user.image);
                     try {
                         // Remove the old file from the remote server
-                        cloudinary.uploader.destroy(publicId).then(res => console.log("file removed from remote: ", res)).catch(e => console.log("unable to remove remote file: ", e?.message));
+                        cloudinary.uploader.destroy('app/'+publicId).then(res => console.log("file removed from remote: ", res)).catch(e => console.log("unable to remove remote file: ", e?.message));
                     } catch (error) {
                         console.log("Unable to delete image ", publicId)
                     }
@@ -710,7 +711,6 @@ const blockUser = async (req, res) => {
 
 const reportUser = async (req, res) => {
     try {
-        console.log(req.body)
         if (req.user && req.body.userId) {
             let userId = req.body.userId
 
@@ -733,7 +733,20 @@ const reportUser = async (req, res) => {
         res.status(400).send({ success: false, message: error?.message })
     }
 }
+const validateEmail = async (req, res) => {
+    try {
+        let exist = await Users.findOne({ email: req.query.email })
+        res.status(200).send({
+            success: true,
+            message: `Email exist!`,
+            isValid: exist ? false : true
+        })
+    } catch (error) {
+        console.log(error)
+        res.status(400).send({ success: false, message: error?.message })
+    }
+}
 
-module.exports = { fetchUsers, updateLocation, usersNearby, updateProfile, getProfile, updateImage, updateSetting, paymentIntent, createOrder, userFeedback, getPlan, referral, blockUser, reportUser }
+module.exports = { fetchUsers, updateLocation, usersNearby, updateProfile, getProfile, updateImage, updateSetting, paymentIntent, createOrder, userFeedback, getPlan, referral, blockUser, reportUser, validateEmail }
 
 

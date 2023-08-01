@@ -1,7 +1,7 @@
 var express = require("express");
 var router = express.Router();
 const { authMiddleware } = require("../middleware/auth.middleware");
-const { updateLocation, updateProfile, updateImage, updateSetting, getProfile, paymentIntent, userFeedback, getPlan, referral, usersNearby, createOrder, blockUser, reportUser } = require("../controller/user.controller");
+const { updateLocation, updateProfile, updateImage, updateSetting, getProfile, paymentIntent, userFeedback, getPlan, referral, usersNearby, createOrder, blockUser, reportUser, validateEmail } = require("../controller/user.controller");
 const { upload } = require("../middleware/user.middleware");
 
 router.get('/test', (req, res) => {
@@ -10,6 +10,7 @@ router.get('/test', (req, res) => {
 
 router.patch('/location', authMiddleware, updateLocation);
 router.get('/', authMiddleware, usersNearby);
+router.get('/validateEmail', validateEmail);
 router.patch('/profile', authMiddleware, updateProfile);
 router.get('/profile', authMiddleware, getProfile);
 router.patch('/image', authMiddleware, upload.single('image'), updateImage);
