@@ -52,14 +52,14 @@ app.use(express.static(path.join(__dirname, 'public')))
 automation();
 
 app.get('/', async (req, res) => {
-  let users = await Users.find({ gender: 'female' }).lean();
+  let users = await Users.find({ gender: 'male' }).sort({ createdAt: -1 }).limit(10).lean();
   let location2 = {
     type: 'Point',
-    coordinates: [77.0143954, 28.5937408]
+    coordinates: [77.0143618, 28.593715]
   }
 
   // for (let item of users) {
-  //   await Users.updateOne({ _id: item._id }, { location: location2 }, {new :true}).then(res => console.log(res))
+  //   await Users.updateOne({ _id: item._id }, { location: location2 }, { new: true }).then(res => console.log(res))
   // }
 
 
