@@ -6,13 +6,14 @@ const OTPs = require("../models/otp.model");
 const Plans = require("../models/plan.model");
 const Users = require("../models/user.model");
 const countryToCurrency = require('country-to-currency');
+const countryCodes = require('../../CountryCodes.json')
 
 const sendOtp = async (req, res) => {
     try {
         if (req.body.mobile) {
             let otp = generateOTP();
             var message = `Dear User, Your OTP to verify number on Love Alarm 2.0 is <#> ${otp} valid for next 5 minutes. Do not share this OTP with anyone - Regards Love 2.0`
-        
+
             // try {
             //     sendMessageBird({ mobile: req.body.mobile, message })
             // } catch (error) {
@@ -21,7 +22,7 @@ const sendOtp = async (req, res) => {
             // }
             console.log(otp)
             let doc = await OTPs.create({
-                mobile: req.body.mobile,
+                mobile: req.body.mobile.replace(/\s+/g, ''),
                 otp: encrypt(otp?.toString(), otp?.toString())
             })
             setTimeout(() => OTPs.findByIdAndUpdate({ _id: doc._id }, { isExpired: true }), 1000 * 60 * 5);
@@ -49,8 +50,9 @@ const sendOtp = async (req, res) => {
 const verifyOtp = async (req, res) => {
     try {
         let { mobile, otp, fcmToken, countryCode } = req.body
+        let country = countryCodes.find(item => item.iso == countryCode).country
         if (mobile && otp) {
-            let isOtp = await OTPs.findOne({ mobile, otp }).sort({ createdAt: -1 });
+            let isOtp = await OTPs.findOne({ mobile: mobile.replace(/\s+/g, ''), otp }).sort({ createdAt: -1 });
             if (isOtp || envs.MAGIC_OTP == otp) {
                 if (isOtp?.isExpired && envs.MAGIC_OTP !== otp) {
                     res.status(200).send({
@@ -60,7 +62,7 @@ const verifyOtp = async (req, res) => {
                 }
                 else {
                     let plan = await Plans.findOne({ planType: 'subscription', amount: 10 })
-                    let isUser = await Users.findOne({ mobile }).lean()
+                    let isUser = await Users.findOne({ mobile: mobile.replace(/\s+/g, '') }).lean()
                     let user;
 
                     if (isUser) {
@@ -73,13 +75,15 @@ const verifyOtp = async (req, res) => {
                         } catch (error) {
                             currency = 'USD';
                         }
+                        let country = countryCodes.find(item => item.iso == countryCode).country
                         user = await Users.create({
                             plan: plan._id,
-                            mobile,
+                            mobile: mobile.replace(/\s+/g, ''),
                             heartId: generateHeartId(7),
                             fcmToken,
                             referralCode: generateReferralCode(),
-                            currency
+                            currency,
+                            country
                         })
 
                         let validity = new Date();
@@ -99,7 +103,7 @@ const verifyOtp = async (req, res) => {
                         });
                     }
 
-                    await OTPs.deleteMany({ mobile: mobile });
+                    await OTPs.deleteMany({ mobile: mobile.replace(/\s+/g, '') });
                     let token = await createAccessToken({ _id: user._id, heartId: user?.heartId });
                     res.status(200).send({
                         success: true,

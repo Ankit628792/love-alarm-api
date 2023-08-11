@@ -13,6 +13,7 @@ var schema = new mongoose.Schema({
         isActive: { type: Boolean, default: true }
     },
     currency: { type: String, default: 'USD' },
+    country: { type: String },
     email: { type: String, trim: true, lowercase: true },
     mobile: { type: String, trim: true, unique: true, validate: hasNumber },
     name: { type: String, trim: true },
@@ -95,16 +96,3 @@ schema.pre('validate', async function (next) {
 const Users = mongoose.model('Users', schema);
 
 module.exports = Users
-
-
-// npm install crypto-js
-
-// import { AES } from 'crypto-js';
-
-// Backend
-// const ciphertext = 'U2FsdGVkX1+g3W3W4P2sKmU9QqUv6L+G';
-// const secretKey = 'my-secret-key';
-
-// const bytes = AES.decrypt(ciphertext, secretKey);
-// const decryptedData = bytes.toString(CryptoJS.enc.Utf8);
-// console.log('Decrypted data:', decryptedData);
