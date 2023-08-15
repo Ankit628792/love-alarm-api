@@ -1,6 +1,6 @@
 const envs = require("../../config/env");
 const { cloudinary, stripe } = require("../../helpers");
-const { verifyImage, sendVerifyResponse } = require("../../helpers/sightengine");
+const { verifyImage, sendVerifyResponse, workflowSight } = require("../../helpers/sightengine");
 const Feedbacks = require("../models/feedback.model");
 const Orders = require("../models/order.model");
 const Plans = require("../models/plan.model");
@@ -258,18 +258,17 @@ const updateImage = async (req, res) => {
             // let url = `${envs.PROTOCOL}://${envs.HOST}/${req.file?.path}`
             let imageVerify;
             try {
-                imageVerify = await verifyImage({ image: url });
-                imageVerify = sendVerifyResponse(imageVerify);
+                imageVerify = await workflowSight({ image: url })
             } catch (error) {
                 console.log(error.message);
                 imageVerify = {
-                    verified: false
+                    verified: true
                 };
             }
+            console.log(imageVerify)
 
-            console.log(imageVerify, 2)
             // Add AES.encrypt before sending image response
-            if (imageVerify.verified && imageVerify.faceDetected == 1 && imageVerify.nuditySafeProbability > 0.7) {
+            if (imageVerify?.verified) {
 
                 // Upload the file to Cloudinary
                 const result = await cloudinary.uploader.upload(req.file.path);
@@ -281,7 +280,7 @@ const updateImage = async (req, res) => {
                     const publicId = getPublicId(user.image);
                     try {
                         // Remove the old file from the remote server
-                        cloudinary.uploader.destroy('app/'+publicId).then(res => console.log("file removed from remote: ", res)).catch(e => console.log("unable to remove remote file: ", e?.message));
+                        cloudinary.uploader.destroy('app/' + publicId).then(res => console.log("file removed from remote: ", res)).catch(e => console.log("unable to remove remote file: ", e?.message));
                     } catch (error) {
                         console.log("Unable to delete image ", publicId)
                     }

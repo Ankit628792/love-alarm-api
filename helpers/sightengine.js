@@ -29,7 +29,7 @@ const sendVerifyResponse = (imageVerify) => {
     imageVerify.faces.map(({ celebrity }) => {
       // console.log(celebrity);
       const matchedCelebrity = celebrity?.filter(({ prob }) => prob > 0.9);
-      console.log(matchedCelebrity);
+
       if (matchedCelebrity?.length) {
         verified = false;
         extraInfo.reason = 'Please use a non-celebrity picture';
@@ -59,7 +59,55 @@ const sendVerifyResponse = (imageVerify) => {
   return { verified, ...extraInfo };
 };
 
+
+const workflowSight = async ({ image }) => {
+  let obj = {
+    verified: true,
+    reason: ''
+  }
+  try {
+    let res = await axios.get('https://api.sightengine.com/1.0/check-workflow.json', {
+      params: {
+        'url': image,
+        'workflow': envs.SIGHTENGINE_API_WORKFLOW,
+        api_user: envs.SIGHTENGINE_API_USER,
+        api_secret: envs.SIGHTENGINE_API_SECRET,
+      }
+    })
+    let response = res.data;
+    if (response?.status === "success") {
+      if (response.summary.action == 'reject') {
+        obj.verified = false;
+        // if (response.summary.reject_reason?.length > 1) {
+        //   obj.reason = response.summary.reject_reason[0].text + " and " + response.summary.reject_reason[1].text
+        // }
+        // else if (response.summary.reject_reason.length == 1) {
+        //   obj.reason = response.summary.reject_reason[0].text
+        // }
+        if (response.summary.reject_reason.length) {
+          obj.reason = response.summary.reject_reason[0].text
+        }
+        else {
+          obj.reason = 'Inappropriate Image Found'
+        }
+        return obj
+      }
+      else{
+        return obj
+      }
+    }
+    else {
+      return obj
+    }
+  } catch (error) {
+    return obj
+  }
+
+}
+
+
 module.exports = {
   verifyImage,
   sendVerifyResponse,
+  workflowSight
 };
