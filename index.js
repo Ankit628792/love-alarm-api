@@ -66,6 +66,8 @@ app.get('/', async (req, res) => {
   res.status(200).send({ msg: `Backend moves to active state on ${new Date().toString()}` })
 })
 
+app.get('/crash', async (req, res) => res.send(crash))
+
 app.use("/api/v2/", routes);
 
 
