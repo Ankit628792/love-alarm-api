@@ -7,6 +7,7 @@ dist
 
 prod.env
 dev.env
+aws.env
 local.env
 .env.local
 .env
