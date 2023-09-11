@@ -50,8 +50,8 @@ const sendOtpOld = async (req, res) => {
 
 const sendOtp = async (req, res) => {
     try {
-        let email = req.body.email.replace(/\s+/g, '');
-        let mobile = req.body.mobile.replace(/\s+/g, '')
+        let email = req.body.email?.replace(/\s+/g, '');
+        let mobile = req.body.mobile?.replace(/\s+/g, '')
         if (mobile && email) {
             email = email?.toLowerCase()?.trim();
 

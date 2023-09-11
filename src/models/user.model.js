@@ -9,7 +9,7 @@ var schema = new mongoose.Schema({
     status: { type: String, default: 'pending', enum: ['active', 'blocked', 'pending'], required: true },
     plan: { type: mongoose.Schema.Types.ObjectId, ref: 'Plans', required: true },
     setting: {
-        language: { type: String, default: 'en' },
+        language: { type: String },
         isActive: { type: Boolean, default: true }
     },
     currency: { type: String, default: 'USD' },

@@ -5,7 +5,7 @@
  * Module dependencies.
  */
 
-var app = require('../index');
+var app = require('../server');
 var debug = require('debug')('lovealarm-api:server');
 var http = require('http');
 const initializeSocket = require("../helpers/socket");

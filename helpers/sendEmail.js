@@ -5,11 +5,13 @@ const sendEmail = async (data) => {
     try {
 
         var transporter = nodemailer.createTransport({
+            // host: "smtpout.secureserver.net",
+            // port: 465,
+            // ssl: false,
+            // secure: true,
             host: "smtpout.secureserver.net",
-            port: 465,
-            ssl: false,
-            secure: true,
-
+            secure: false,
+            port: 587,
             auth: {
                 user: envs.MAIL_ID,
                 pass: envs.MAIL_PASSWORD,
