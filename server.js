@@ -67,6 +67,7 @@ app.get('/', async (req, res) => {
 })
 
 app.get('/crash', async (req, res) => res.send(crash))
+app.get('/test', async (req, res) => { console.log('Backend is OK'); res.send({ status: 200, message: "Backend is OK" }) })
 
 app.use("/api/v2/", routes);
 

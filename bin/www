@@ -6,7 +6,7 @@
  */
 
 var app = require('../server');
-var debug = require('debug')('lovealarm-api:server');
+var debug = require('debug')('api.lovealarm.in:server');
 var http = require('http');
 const initializeSocket = require("../helpers/socket");
 /**
