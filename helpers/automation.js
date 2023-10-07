@@ -3,6 +3,8 @@ const Plans = require('../src/models/plan.model');
 const Users = require('../src/models/user.model');
 const Orders = require('../src/models/order.model');
 const OTPs = require('../src/models/otp.model');
+const Conversations = require('../src/models/conversation.model');
+const Matches = require('../src/models/match.model');
 
 const planAutomation = () => scheduler.scheduleJob('10 0 0 * * *', async function () {
     let freePlan = await Plans.findOne({ planType: 'free' }).lean()
@@ -43,12 +45,20 @@ const locationAutomation = () => scheduler.scheduleJob('0 * * * *', async functi
     await Users.updateMany({ updatedAt: { $lte: date.toISOString() } }, { location });
 });
 
+const removeMatchChat = () => scheduler.scheduleJob('40 0 0 * * *', async function () {
+    let date = new Date()
+    date.setDate(date.getDate() - 1)
+    await Conversations.deleteMany({ active: [], createdAt: { $lte: date.toISOString() } })
+    await Matches.deleteMany({ users: [], createdAt: { $lte: date.toISOString() } })
+});
+
 
 const automation = () => {
     locationAutomation();
     otpAutomation();
     planAutomation();
     orderAutomation();
+    removeMatchChat();
 }
 
 
