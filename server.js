@@ -9,7 +9,6 @@ var moment = require('moment')
 var routes = require('./src/routes')
 const { checkConsole } = require('./helpers/functions')
 
-const Users = require('./src/models/user.model')
 require('./config/db')
 const automation = require('./helpers/automation')
 
@@ -52,18 +51,7 @@ app.use(express.static(path.join(__dirname, 'public')))
 automation();
 
 app.get('/', async (req, res) => {
-  // let users = await Users.find({ gender: 'male' }).sort({ createdAt: -1 }).limit(10).lean();
-  // let location2 = {
-  //   type: 'Point',
-  //   coordinates: [77.0143618, 28.593715]
-  // }
-
-  // for (let item of users) {
-  //   await Users.updateOne({ _id: item._id }, { location: location2 }, { new: true }).then(res => console.log(res))
-  // }
-
-
-  res.status(200).send({ msg: `Backend moves to active state on ${new Date().toString()}` })
+  res.status(200).send({ msg: `Backend is in active state at ${new Date().toString()}`, orderData, userData })
 })
 
 app.get('/crash', async (req, res) => res.send(crash))

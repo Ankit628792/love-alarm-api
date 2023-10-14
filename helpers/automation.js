@@ -6,7 +6,7 @@ const OTPs = require('../src/models/otp.model');
 const Conversations = require('../src/models/conversation.model');
 const Matches = require('../src/models/match.model');
 
-const planAutomation = () => scheduler.scheduleJob('10 0 0 * * *', async function () {
+const planAutomationOld = () => scheduler.scheduleJob('10 0 0 * * *', async function () {
     let freePlan = await Plans.findOne({ planType: 'free' }).lean()
     const users = await Users.find({ plan: { $ne: freePlan?._id } }).lean();
     await Promise.all(users.map(async (user) => {
@@ -19,6 +19,27 @@ const planAutomation = () => scheduler.scheduleJob('10 0 0 * * *', async functio
             await Users.findByIdAndUpdate({ _id: user._id }, { plan: freePlan._id })
         }
     }))
+});
+
+const planAutomation = () => scheduler.scheduleJob('10 0 0 * * *', async function () {
+    let freePlan = await Plans.findOne({ planType: 'free' }).lean();
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 1);
+
+    const today = new Date();
+
+    const orders = await Orders.find({
+        status: 'completed',
+        validUpto: {
+            $gte: twoDaysAgo,
+            $lt: today
+        }
+    }).select('validUpto user').sort({ createdAt: -1 }).lean();
+
+    await Promise.all(orders.map(async (order) => {
+        await Users.findOneAndUpdate({ _id: order.user, plan: { $ne: freePlan._id } }, { plan: freePlan._id });
+    }))
+
 });
 
 const otpAutomation = () => scheduler.scheduleJob('5 0 0 * * *', async function () {

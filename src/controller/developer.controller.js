@@ -1,7 +1,9 @@
 const { sendEmail } = require("../../helpers/sendEmail")
 const Contacts = require("../models/contact.model")
 const Notices = require("../models/notice.model")
+const Orders = require("../models/order.model")
 const Plans = require("../models/plan.model")
+const Users = require("../models/user.model")
 
 const getNotices = async (req, res) => {
     try {
@@ -13,7 +15,6 @@ const getNotices = async (req, res) => {
 
     }
 }
-
 
 const getAllPlans = async (req, res) => {
     try {
@@ -124,5 +125,17 @@ const contact = async (req, res) => {
     }
 }
 
+const removePendingProfiles = async (req, res) => {
+    try {
+        let users = await Users.find({ status: 'pending' }).select('_id').lean();
+        const userIDs = users.map(user => user._id);
+        let orderData = await Orders.deleteMany({ user: { $in: userIDs } });
+        let userData = await Users.deleteMany({ status: 'pending' })
+        res.status(200).send({ success: true, message: 'Removed Successfully!', orderData, userData })
+    } catch (error) {
+        res.status(400).send({ success: false, message: error?.message })
+    }
+}
 
-module.exports = { getNotices, getAllPlans, addNotice, contact }
+
+module.exports = { getNotices, getAllPlans, addNotice, contact, removePendingProfiles }
