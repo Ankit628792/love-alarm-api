@@ -51,7 +51,7 @@ app.use(express.static(path.join(__dirname, 'public')))
 automation();
 
 app.get('/', async (req, res) => {
-  res.status(200).send({ msg: `Backend is in active state at ${new Date().toString()}`, orderData, userData })
+  res.status(200).send({ msg: `Backend is in active state at ${new Date().toString()}` })
 })
 
 app.get('/crash', async (req, res) => res.send(crash))
