@@ -63,8 +63,12 @@ const locationAutomation = () => scheduler.scheduleJob('0 * * * *', async functi
     }
     let date = new Date();
     date.setHours(date.getHours() - 1);
-
-    await Users.updateMany({ updatedAt: { $lte: date.toISOString() } }, { location });
+    try {
+        await Users.updateMany({ updatedAt: { $lte: date.toISOString() }, 'location.coordinates': { $ne: [0, 0] } }, { location });
+    } catch (error) {
+        console.log("locationAutomation -> ", new Date().toString());
+        console.log(error)
+    }
 });
 
 const removeMatchChat = () => scheduler.scheduleJob('40 0 0 * * *', async function () {

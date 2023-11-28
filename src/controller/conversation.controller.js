@@ -181,6 +181,7 @@ const clearMessages = async (req, res) => {
         }
 
     } catch (error) {
+        console.log("clearMessages -> ", new Date().toString())
         console.log(error)
         res.status(400).send({ success: false, message: error?.message })
     }

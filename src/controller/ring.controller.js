@@ -166,6 +166,7 @@ const pauseRinging = async (req, res) => {
         else
             res.status(400).send({ success: false, message: 'Missing Params' })
     } catch (error) {
+        console.log("pauseRinging -> ", new Date().toString())
         console.log(error)
         res.status(400).send({ success: false, message: error?.message })
     }
@@ -222,4 +223,4 @@ const getTotalRings = async (req, res) => {
     }
 }
 
-module.exports = { getAlarmRings, ringLoveAlarm, pauseRinging, getMatches, getTotalRings , insertRing, handlePostRing}
+module.exports = { getAlarmRings, ringLoveAlarm, pauseRinging, getMatches, getTotalRings, insertRing, handlePostRing }

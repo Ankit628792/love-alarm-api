@@ -341,6 +341,7 @@ const paymentIntent = async (req, res) => {
         let amount = plan.amount;
 
         if (currencyCode === 'INR') {
+            // https://cdn.jsdelivr.net/gh/fawazahmed0/currency-api@1/latest/currencies/inr/krw.json
             let response = await axios.get(`https://api.apilayer.com/exchangerates_data/convert?to=${currencyCode}&from=USD&amount=${amount}`, { headers: { redirect: 'follow', apiKey: envs.EXCHANGE_RATE_API } })
 
             if (response.data?.success) {
@@ -703,6 +704,7 @@ const blockUser = async (req, res) => {
             res.status(400).send({ success: false, message: 'Missing Params' })
         }
     } catch (error) {
+        console.log("blockUser -> ", new Date().toString())
         console.log(error)
         res.status(400).send({ success: false, message: error?.message })
     }
