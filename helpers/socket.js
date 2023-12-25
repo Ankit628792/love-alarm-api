@@ -52,7 +52,7 @@ const initializeSocket = (server) => {
                             let data = await fetchUsers({ _id: userInfo?._id, longitude: userInfo.location.longitude, latitude: userInfo.location.latitude });
                             io.to(user.socketId).emit('receiveData', data);
                         } catch (error) {
-                            console.log("fetchUsers err ")
+                            console.log("fetchUsers err -> ", error)
                         }
                     }
                 }

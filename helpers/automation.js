@@ -37,9 +37,14 @@ const planAutomation = () => scheduler.scheduleJob('10 0 0 * * *', async functio
         }
     }).select('validUpto user').sort({ createdAt: -1 }).lean();
 
-    await Promise.all(orders.map(async (order) => {
-        await Users.findOneAndUpdate({ _id: order.user, plan: { $ne: freePlan._id } }, { plan: freePlan._id });
-    }))
+    try {
+        await Promise.all(orders.map(async (order) => {
+            await Users.findOneAndUpdate({ _id: order.user, plan: { $ne: freePlan._id } }, { plan: freePlan._id });
+        }))
+    } catch (error) {
+        console.log("planAutomation -> ", new Date().toString());
+        console.log(error)
+    }
 
 });
 
