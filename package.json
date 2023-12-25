@@ -4,11 +4,9 @@
   "description": "api for love alarm version 2 mobile app",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node bin/www",
-    "start1": "PORT=5001 node bin/www",
-    "start2": "PORT=5002 node bin/www",
-    "dev": "nodemon bin/www"
+    "test": "PORT=5001 node bin/www",
+    "dev": "PORT=5002 node bin/www"
   },
   "keywords": [
     "lovealarm",
