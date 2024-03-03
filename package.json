@@ -4,7 +4,7 @@
   "description": "api for love alarm version 2 mobile app",
   "main": "index.js",
   "scripts": {
-    "start": "node bin/www",
+    "start": "PORT=5000 node bin/www",
     "test": "PORT=5001 node bin/www",
     "dev": "PORT=5002 node bin/www"
   },
